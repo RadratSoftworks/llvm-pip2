@@ -10,6 +10,8 @@ add_library(llvm-pip2
         VMEngine.cpp
         VMEngine.h
         ProgramAnalysis.cpp
-        ProgramAnalysis.h)
+        ProgramAnalysis.h
+        Common.h
+        Common.cpp)
 
 target_link_libraries(llvm-pip2 PRIVATE llvm)
