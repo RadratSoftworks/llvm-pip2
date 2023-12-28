@@ -8,24 +8,26 @@
 #include <map>
 #include <set>
 
-namespace Pip2 {
-    struct JumpTable {
+namespace Pip2
+{
+    struct JumpTable
+    {
         std::uint32_t jump_instruction_addr_;
-
-        // Index to the target jump label in the function
-        std::vector<std::size_t> label_indices_;
+        std::vector<std::size_t> labels_;
     };
 
-    struct Function {
+    struct Function
+    {
         std::uint32_t addr_;
         std::size_t length_;
 
         // Label separate function into code blocks
-        std::vector<std::uint32_t> labels_;
+        std::set<std::uint32_t> labels_;
         std::vector<JumpTable> jump_tables_;
     };
 
-    class ProgramAnalysis {
+    class ProgramAnalysis
+    {
     private:
         const std::uint32_t *memory_base_;
         std::size_t text_base_;
@@ -41,8 +43,9 @@ namespace Pip2 {
 
     public:
         explicit ProgramAnalysis(const std::uint32_t *memory_base, std::size_t text_base, std::size_t text_size,
-                                 const PoolItems& pool_items)
-            : memory_base_(memory_base), text_base_(text_base), text_size_(text_size), pool_items_(pool_items) {
+                                 const PoolItems &pool_items)
+            : memory_base_(memory_base), text_base_(text_base), text_size_(text_size), pool_items_(pool_items)
+        {
         }
 
         std::vector<Function> analyze(std::uint32_t entry_point_addr);

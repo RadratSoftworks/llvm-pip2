@@ -114,8 +114,10 @@ namespace Pip2
         }
     }
 
-    static bool is_branch_offset_encoded_in_instruction(const Instruction &instruction) {
-        switch (instruction.word_encoding.opcode) {
+    static bool is_branch_offset_encoded_in_instruction(const Instruction &instruction)
+    {
+        switch (instruction.word_encoding.opcode)
+        {
         case Opcode::BEQI:
         case Opcode::BEQIB:
         case Opcode::BNEI:
@@ -138,7 +140,34 @@ namespace Pip2
         case Opcode::BGEUIB:
             return true;
 
-            break;
+        default:
+            return false;
+        }
+    }
+
+    static bool does_non_branch_instruction_consume_dword(const Instruction &instruction)
+    {
+        switch (instruction.word_encoding.opcode)
+        {
+        case Opcode::STWd:
+        case Opcode::STHd:
+        case Opcode::STBd:
+        case Opcode::LDI:
+        case Opcode::LDWd:
+        case Opcode::LDHUd:
+        case Opcode::LDHd:
+        case Opcode::LDBUd:
+        case Opcode::LDBd:
+        case Opcode::ADDi:
+        case Opcode::SUBi:
+        case Opcode::MULi:
+        case Opcode::DIVi:
+        case Opcode::DIVUi:
+        case Opcode::ANDi:
+        case Opcode::ORi:
+        case Opcode::XORi:
+            return true;
+
         default:
             return false;
         }
@@ -162,22 +191,25 @@ namespace Pip2
         // Calculate the branch target
         if (is_branch_offset_encoded_in_instruction(instruction))
         {
-            return addr + instruction.two_sources_encoding.rt * 4;
+            return addr + static_cast<std::int8_t>(instruction.two_sources_encoding.rt) * 4;
         }
         else
         {
             next_word_consumed = true;
 
-            if (std::optional<std::uint32_t> immediate = Common::get_immediate_pip_dword(next_word)) {
-                return addr + immediate.value() * 4;
+            if (std::optional<std::uint32_t> immediate = Common::get_immediate_pip_dword(next_word))
+            {
+                return addr + static_cast<std::int32_t>(immediate.value()) * 4;
             }
 
-            if (pool_items.is_pool_item_terminate_function(next_word)) {
+            if (pool_items.is_pool_item_terminate_function(next_word))
+            {
                 is_termination = true;
                 return std::nullopt;
             }
 
-            if (pool_items.is_pool_item_constant(next_word)) {
+            if (pool_items.is_pool_item_constant(next_word))
+            {
                 return pool_items.get_pool_item_constant(next_word);
             }
 
@@ -185,8 +217,10 @@ namespace Pip2
         }
     }
 
-    void ProgramAnalysis::add_to_function_analyse_queue(std::uint32_t addr) {
-        if (addr < text_base_) {
+    void ProgramAnalysis::add_to_function_analyse_queue(std::uint32_t addr)
+    {
+        if (addr < text_base_)
+        {
             throw std::runtime_error("Address is out of text segment");
         }
 
@@ -197,46 +231,55 @@ namespace Pip2
         }
     }
 
-    Function ProgramAnalysis::sweep_function(std::uint32_t addr) {
+    Function ProgramAnalysis::sweep_function(std::uint32_t addr)
+    {
         Function result_function;
         result_function.addr_ = addr;
 
-        std::vector<std::uint32_t> suspecting_to_be_labels;
+        std::set<std::uint32_t> suspecting_to_be_labels;
         std::vector<std::uint32_t> unfinished_blocks_left;
 
         unfinished_blocks_left.push_back(addr);
-        result_function.labels_.push_back(addr);
+        result_function.labels_.insert(addr);
 
         std::uint32_t current_going_through_block = addr;
 
+        auto mark_block_finished = [&unfinished_blocks_left, &current_going_through_block]()
+        {
+            auto unfinished_block_ite = std::lower_bound(unfinished_blocks_left.begin(), unfinished_blocks_left.end(), current_going_through_block);
+
+            if (unfinished_block_ite != unfinished_blocks_left.end() && *unfinished_block_ite == current_going_through_block)
+            {
+                unfinished_blocks_left.erase(unfinished_block_ite);
+            }
+            else
+            {
+                throw std::runtime_error("Unfinished block not found in list");
+            }
+        };
+
         while (true)
         {
-            auto existing_suspecting_label = std::lower_bound(suspecting_to_be_labels.begin(), suspecting_to_be_labels.end(), addr);
-            if (existing_suspecting_label != suspecting_to_be_labels.end()) {
-                if (*existing_suspecting_label == addr) {
-                    // Found a label, add it to the result function
-                    result_function.labels_.push_back(addr);
+            auto existing_suspecting_label = suspecting_to_be_labels.find(addr);
+            if (existing_suspecting_label != suspecting_to_be_labels.end())
+            {
+                // Found a label, add it to the result function
+                result_function.labels_.insert(addr);
+                suspecting_to_be_labels.erase(existing_suspecting_label);
 
-                    suspecting_to_be_labels.erase(existing_suspecting_label);
-
-                    auto unfinished_block_ite = std::lower_bound(unfinished_blocks_left.begin(), unfinished_blocks_left.end(), current_going_through_block);
-
-                    if (unfinished_block_ite != unfinished_blocks_left.end() && *unfinished_block_ite == current_going_through_block) {
-                        unfinished_blocks_left.erase(unfinished_block_ite);
-                    }
-                    else
-                    {
-                        throw std::runtime_error("Unfinished block not found in list");
-                    }
-
-                    unfinished_blocks_left.push_back(addr);
-                    current_going_through_block = addr;
+                if (!unfinished_blocks_left.empty())
+                {
+                    mark_block_finished();
                 }
+
+                current_going_through_block = addr;
+                unfinished_blocks_left.push_back(addr);
             }
             else
             {
                 // No more block to be expected
-                if (unfinished_blocks_left.empty()) {
+                if (unfinished_blocks_left.empty())
+                {
                     result_function.length_ = addr - result_function.addr_;
                     break;
                 }
@@ -261,11 +304,7 @@ namespace Pip2
                 if (is_terminate_function)
                 {
                     // Terminate function ends the function prematurely!
-                    auto unfinished_block_ite = std::lower_bound(unfinished_blocks_left.begin(), unfinished_blocks_left.end(), current_going_through_block);
-
-                    if (unfinished_block_ite != unfinished_blocks_left.end() && *unfinished_block_ite == current_going_through_block) {
-                        unfinished_blocks_left.erase(unfinished_block_ite);
-                    }
+                    mark_block_finished();
                 }
                 else
                 {
@@ -295,16 +334,27 @@ namespace Pip2
                             // Probably loop, don't analyse it, just add a label
                             // As loop is kind of broad in terms of the condition, we probably will just let LLVM do the job
                             // of detect and optimize potential loop
-                            if (jump_target.value() < addr) {
-                                if (std::find(result_function.labels_.begin(), result_function.labels_.end(), jump_target.value()) == result_function.labels_.end()) {
-                                    result_function.labels_.push_back(jump_target.value());
+                            if (jump_target.value() < addr)
+                            {
+                                if (std::find(result_function.labels_.begin(), result_function.labels_.end(), jump_target.value()) == result_function.labels_.end())
+                                {
+                                    result_function.labels_.insert(jump_target.value());
+                                }
+
+                                mark_block_finished();
+
+                                // Non conditional block won't continue the current flow
+                                if (instruction.word_encoding.opcode != Opcode::JPl && instruction.word_encoding.opcode != Opcode::CALLl)
+                                {
+                                    current_going_through_block = addr + INSTRUCTION_SIZE;
+
+                                    unfinished_blocks_left.push_back(addr + INSTRUCTION_SIZE);
+                                    result_function.labels_.insert(addr + INSTRUCTION_SIZE);
                                 }
                             }
-                            else {
-                                suspecting_to_be_labels.push_back(jump_target.value());
-
-                                unfinished_blocks_left.push_back(addr + INSTRUCTION_SIZE);
-                                result_function.labels_.push_back(addr + INSTRUCTION_SIZE);
+                            else
+                            {
+                                suspecting_to_be_labels.insert(jump_target.value());
                             }
                         }
                     }
@@ -328,24 +378,28 @@ namespace Pip2
                 bool block_ending_sign_appear = true;
 
                 // Take a risk and cut off when jump to RA
-                if (instruction.two_sources_encoding.opcode == Opcode::JPr && instruction.two_sources_encoding.rd != Register::RA) {
+                if (instruction.two_sources_encoding.opcode == Opcode::JPr && instruction.two_sources_encoding.rd != Register::RA)
+                {
                     // Confirm if it has a jump table pattern
                     Instruction potential_offset_calc_instruction{memory_base_[(addr >> 2) - 3]};
                     Instruction potential_table_base_load_instruction{memory_base_[(addr >> 2) - 2]};
 
                     if (potential_offset_calc_instruction.word_encoding.opcode == Opcode::SLLi &&
                         potential_table_base_load_instruction.word_encoding.opcode == Opcode::LDWd &&
-                        potential_offset_calc_instruction.two_sources_encoding.rt == 2) {
+                        potential_offset_calc_instruction.two_sources_encoding.rt == 2)
+                    {
                         JumpTable jump_table;
                         jump_table.jump_instruction_addr_ = addr;
 
                         std::uint8_t indexing_register = potential_offset_calc_instruction.two_sources_encoding.rd;
+                        std::uint8_t index_source_register = potential_offset_calc_instruction.two_sources_encoding.rs;
                         std::uint32_t switch_start_addr = addr - INSTRUCTION_SIZE * 3;
 
                         // There may be an AND instruction before SLL too, to cast down the integer, allow it
                         Instruction potential_and_instruction{memory_base_[(addr >> 2) - 4]};
                         if (potential_and_instruction.two_sources_encoding.opcode == Opcode::ANDi &&
-                            potential_and_instruction.two_sources_encoding.rd == indexing_register) {
+                            potential_and_instruction.two_sources_encoding.rd == indexing_register)
+                        {
                             switch_start_addr -= INSTRUCTION_SIZE;
                         }
 
@@ -356,38 +410,45 @@ namespace Pip2
                         if ((possible_branch_instruction.two_sources_encoding.opcode == Opcode::BGTUI) ||
                             (possible_branch_instruction.two_sources_encoding.opcode == Opcode::BGTI) ||
                             (possible_branch_instruction.two_sources_encoding.opcode == Opcode::BGTIB) ||
-                            (possible_branch_instruction.two_sources_encoding.opcode == Opcode::BGTUIB)) {
-                            if (possible_branch_instruction.two_sources_encoding.rd == indexing_register) {
+                            (possible_branch_instruction.two_sources_encoding.opcode == Opcode::BGTUIB))
+                        {
+                            if (possible_branch_instruction.two_sources_encoding.rd == index_source_register)
+                            {
                                 total_cases = possible_branch_instruction.two_sources_encoding.rs + 1;
                             }
                         }
 
-                        if (total_cases == std::numeric_limits<std::size_t>::max()) {
+                        if (total_cases == std::numeric_limits<std::size_t>::max())
+                        {
                             // Probably a BLE instruction that is containing case count
                             static constexpr std::size_t MAX_TRACE_BACK = 50;
 
-                            for (auto i = 0; i < MAX_TRACE_BACK; i++) {
+                            for (auto i = 0; i < MAX_TRACE_BACK; i++)
+                            {
                                 Instruction tracing_instruction{memory_base_[(switch_start_addr >> 2) - (i + 1)]};
 
                                 if ((possible_branch_instruction.two_sources_encoding.opcode == Opcode::BLEI) ||
                                     (possible_branch_instruction.two_sources_encoding.opcode == Opcode::BLEIB) ||
                                     (possible_branch_instruction.two_sources_encoding.opcode == Opcode::BLEUI) ||
-                                    (possible_branch_instruction.two_sources_encoding.opcode == Opcode::BLEUIB)) {
-                                    if (possible_branch_instruction.two_sources_encoding.rd == indexing_register) {
+                                    (possible_branch_instruction.two_sources_encoding.opcode == Opcode::BLEUIB))
+                                {
+                                    if (possible_branch_instruction.two_sources_encoding.rd == indexing_register)
+                                    {
                                         bool temp_word_consumed = false;
                                         bool temp_is_terminate = false;
 
                                         // Check jump target
                                         std::optional<std::uint32_t> branch_jump_target = calculate_direct_jump_target(
-                                                pool_items_,
-                                                tracing_instruction,
-                                                switch_start_addr - INSTRUCTION_SIZE * (i + 1),
-                                                memory_base_[(switch_start_addr >> 2) - (i + 1) + 1],
-                                                temp_word_consumed,
-                                                temp_is_terminate);
+                                            pool_items_,
+                                            tracing_instruction,
+                                            switch_start_addr - INSTRUCTION_SIZE * (i + 1),
+                                            memory_base_[(switch_start_addr >> 2) - (i + 1) + 1],
+                                            temp_word_consumed,
+                                            temp_is_terminate);
 
                                         if (branch_jump_target.has_value() &&
-                                            (branch_jump_target.value() == switch_start_addr)) {
+                                            (branch_jump_target.value() == switch_start_addr))
+                                        {
                                             total_cases = tracing_instruction.two_sources_encoding.rs;
                                             break;
                                         }
@@ -396,15 +457,18 @@ namespace Pip2
                             }
                         }
 
-                        if (total_cases != std::numeric_limits<std::size_t>::max()) {
-                            jump_table.label_indices_.resize(total_cases);
+                        if (total_cases != std::numeric_limits<std::size_t>::max())
+                        {
+                            jump_table.labels_.resize(total_cases);
 
                             std::uint32_t table_pool_index = memory_base_[(addr >> 2) - 1];
                             std::uint32_t table_pool_addr = pool_items_.get_pool_item_constant(table_pool_index);
 
-                            for (std::size_t i = 0; i < total_cases; i++) {
+                            for (std::size_t i = 0; i < total_cases; i++)
+                            {
                                 std::uint32_t case_addr = memory_base_[(table_pool_addr >> 2) + i];
-                                jump_table.label_indices_.push_back(case_addr - text_base_);
+                                jump_table.labels_[i] = case_addr - text_base_;
+                                suspecting_to_be_labels.insert(case_addr);
                             }
 
                             // Can detect jump table and probably inline all the case blocks
@@ -414,24 +478,27 @@ namespace Pip2
                     }
                 }
 
-                if (block_ending_sign_appear) {
-                    auto unfinished_block_ite = std::lower_bound(unfinished_blocks_left.begin(), unfinished_blocks_left.end(), current_going_through_block);
-
-                    if (unfinished_block_ite != unfinished_blocks_left.end() && *unfinished_block_ite == current_going_through_block) {
-                        unfinished_blocks_left.erase(unfinished_block_ite);
-                    }
-                    else
-                    {
-                        throw std::runtime_error("Unfinished block not found in list");
-                    }
+                if (block_ending_sign_appear)
+                {
+                    mark_block_finished();
                 }
+            }
+            else if (does_non_branch_instruction_consume_dword(instruction))
+            {
+                addr += sizeof(std::uint32_t);
             }
 
             addr += INSTRUCTION_SIZE;
         }
 
-        if (!suspecting_to_be_labels.empty()) {
+        if (!suspecting_to_be_labels.empty())
+        {
             throw std::runtime_error("Some labels are not resolved!");
+        }
+
+        if (!unfinished_blocks_left.empty())
+        {
+            throw std::runtime_error("Some blocks are not finished!");
         }
 
         return result_function;
@@ -456,7 +523,6 @@ namespace Pip2
             {
                 continue;
             }
-
 
             results.push_back(sweep_function(addr));
         }
