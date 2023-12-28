@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <vector>
 #include <queue>
+#include <map>
+#include <set>
 
 namespace Pip2 {
     struct JumpTable {
@@ -30,6 +32,8 @@ namespace Pip2 {
         std::size_t text_size_;
 
         std::queue<std::uint32_t> analyse_queue_;
+        std::set<std::uint32_t> found_functions_;
+
         const PoolItems &pool_items_;
 
         Function sweep_function(std::uint32_t addr);

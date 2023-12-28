@@ -13,6 +13,4 @@ namespace Pip2::Common {
 
         return std::nullopt;
     }
-
-    std::optional<std::uint32_t> read_immediate(const PoolItems &pool_items, std::uint32_t dword);
 }

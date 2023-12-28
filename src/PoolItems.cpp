@@ -12,6 +12,15 @@ namespace Pip2
       return (pool_items_[index - 1] & 0x80000000) == 0;
    }
 
+   bool PoolItems::is_pool_item_terminate_function(const std::size_t index) const
+   {
+       if (index > pool_item_count_ || index == 0)
+       {
+           return false;
+       }
+
+       return (pool_items_[index - 1] & 0x80000001) == 0x80000001;
+   }
 
    std::uint32_t PoolItems::get_pool_item_constant(const std::size_t index) const
    {
