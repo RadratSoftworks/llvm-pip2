@@ -8,6 +8,7 @@ namespace Pip2 {
     private:
         std::uint8_t *memory_base_;
         std::size_t memory_size_;
+
         PoolItems pool_items_;
 
     public:

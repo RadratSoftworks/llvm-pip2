@@ -15,11 +15,4 @@ namespace Pip2 {
             s_mcjit_initialized_ = true;
         }
     }
-
-    void VMEngine::initialize_types() {
-        std::vector<llvm::Type*> context_element_types;
-
-        context_element_types.insert(context_element_types.begin(), Register::TotalCount, llvm::Type::getInt32Ty(llvm_context_));
-        context_type_ = llvm::StructType::create(llvm_context_, context_element_types, "VMContext");
-    }
 }

@@ -12,7 +12,13 @@ add_library(llvm-pip2
         ProgramAnalysis.cpp
         ProgramAnalysis.h
         Common.h
-        Common.cpp)
+        Common.cpp
+        Translator.cpp
+        Translator.h
+        Function.h
+        Translator/Arthimetic.cpp
+        Translator/ControlFlow.cpp
+)
 
 target_include_directories(llvm-pip2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(llvm-pip2 PRIVATE llvm)

@@ -13,4 +13,12 @@ namespace Pip2::Common {
 
         return std::nullopt;
     }
+
+    inline std::uint32_t sign_extend(std::uint8_t value) {
+        return static_cast<std::uint32_t>(static_cast<std::int8_t>(value));
+    }
+
+    inline std::uint32_t sign_extend(std::uint16_t value) {
+        return static_cast<std::uint32_t>(static_cast<std::int16_t>(value));
+    }
 }

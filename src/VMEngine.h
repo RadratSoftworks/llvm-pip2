@@ -8,11 +8,9 @@ namespace Pip2 {
     private:
         static bool s_mcjit_initialized_;
 
-        llvm::StructType *context_type_;
         llvm::LLVMContext llvm_context_;
 
         static void initialize_mcjit();
-        void initialize_types();
 
     public:
         VMEngine() = default;
