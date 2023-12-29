@@ -121,6 +121,7 @@ namespace Pip2
 		LDHi	     = 0x70,
 		LDWi	     = 0x71,
 		LDBUi	     = 0x72,
-		LDHUi	     = 0x73
+		LDHUi	     = 0x73,
+        TotalOpcodes
     };
 }

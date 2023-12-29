@@ -37,11 +37,4 @@ namespace Pip2
 
         set_register(instruction.two_sources_encoding.rd, builder_.CreateSub(lhs, llvm::ConstantInt::get(i32_type_, rhs)));
     }
-
-    void Translator::SUBQ(Instruction instruction) {
-        auto lhs = get_register<std::uint32_t>(instruction.two_sources_encoding.rs);
-        auto rhs = Common::sign_extend(instruction.two_sources_encoding.rt);
-
-        set_register(instruction.two_sources_encoding.rd, builder_.CreateSub(lhs, llvm::ConstantInt::get(i32_type_, rhs)));
-    }
 }

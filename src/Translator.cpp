@@ -66,10 +66,40 @@ namespace Pip2 {
         builder_.CreateStore(value, get_register_pointer(dest));
     }
 
+    void Translator::translate_function(llvm::Function *function, const Function &function_info) {
+        blocks_.clear();
+
+        for (const auto &label: function_info.labels_) {
+            blocks_.emplace(label, llvm::BasicBlock::Create(context_, std::format("label_{:08X}", label), function));
+        }
+
+        for (current_addr_ = function_info.addr_; current_addr_ < function_info.addr_ + function_info.length_; current_addr_ += INSTRUCTION_SIZE) {
+            if (blocks_.find(current_addr_) != blocks_.end()) {
+                builder_.SetInsertPoint(blocks_[current_addr_]);
+            }
+
+            Instruction instruction { *reinterpret_cast<std::uint32_t*>(config_.memory_base() + current_addr_) };
+            InstructionTranslator translator = instruction_translators_[instruction.word_encoding.opcode];
+
+            if (translator == nullptr) {
+                throw new std::runtime_error(std::format("Unhandled instruction: {}", (int)instruction.word_encoding.opcode));
+            }
+
+            (this->*translator)(instruction);
+        }
+    }
+
     llvm::Module *Translator::translate(const std::string &module_name, const std::vector<Function> &functions) {
+        functions_.clear();
+
         auto module = new llvm::Module(module_name, context_);
 
         for (const Function &function: functions) {
+            functions_.emplace(function.addr_, module->getFunction(std::format("sub_{:08X}", function.addr_)));
+        }
+
+        for (const Function &function: functions) {
+            translate_function(functions_[function.addr_], function);
         }
 
         return module;

@@ -16,6 +16,8 @@ namespace Pip2
 {
     class Translator {
     private:
+        typedef void (Translator::*InstructionTranslator)(Instruction);
+
         const VMConfig &config_;
         const PoolItems &pool_items_;
 
@@ -39,6 +41,8 @@ namespace Pip2
     private:
         void initialize_types();
 
+        void translate_function(llvm::Function *function, const Function &function_info);
+
         llvm::Value *get_register_pointer(Register reg);
         void set_register(Register dest, llvm::Value *value);
 
@@ -58,7 +62,6 @@ namespace Pip2
         void ADDQ(Instruction instruction);
         void SUB(Instruction instruction);
         void SUBi(Instruction instruction);
-        void SUBQ(Instruction instruction);
 
         void BEQ(Instruction instruction);
         void BNE(Instruction instruction);
@@ -92,6 +95,31 @@ namespace Pip2
         void BLEUIB(Instruction instruction);
         void BLTIB(Instruction instruction);
         void BLTUIB(Instruction instruction);
+
+    private:
+        InstructionTranslator instruction_translators_[Opcode::TotalOpcodes] = {
+            nullptr, &Translator::ADD, nullptr, nullptr, nullptr,       // 0x00
+            nullptr, nullptr, nullptr, &Translator::SUB, nullptr,       // 0x05
+            nullptr, nullptr, nullptr, nullptr, nullptr,            // 0x0A
+            nullptr, nullptr, nullptr, nullptr, nullptr,            // 0x0F
+            nullptr, nullptr, nullptr, nullptr, nullptr,            // 0x14
+            nullptr, nullptr, nullptr, nullptr, nullptr,            // 0x19
+            nullptr, &Translator::ADDQ, nullptr, nullptr, nullptr,            // 0x1E
+            nullptr, nullptr, nullptr, nullptr, nullptr,            // 0x23
+            nullptr, nullptr, nullptr, nullptr, &Translator::BEQi,            // 0x28
+            &Translator::BNEi, &Translator::BGEi, &Translator::BGEUi, &Translator::BGTi, &Translator::BGTUi,            // 0x2D
+            &Translator::BLEi, &Translator::BLEUi, &Translator::BLTi, &Translator::BLTUi, &Translator::BEQIB,            // 0x32
+            &Translator::BNEIB, &Translator::BGEIB, &Translator::BGEUIB, &Translator::BGTIB, &Translator::BGTUIB,            // 0x37
+            &Translator::BLEIB, &Translator::BLEUIB, &Translator::BLTIB, &Translator::BLTUIB, nullptr,            // 0x3C
+            nullptr, nullptr, nullptr, nullptr, nullptr,            // 0x41
+            nullptr, nullptr, nullptr, nullptr, &Translator::ADDi,            // 0x46
+            nullptr, nullptr, nullptr, nullptr, nullptr,            // 0x4B
+            nullptr, &Translator::SUBi, nullptr, nullptr, nullptr,            // 0x50
+            nullptr, nullptr, nullptr, nullptr, nullptr,            // 0x55
+            nullptr, nullptr, nullptr, &Translator::BEQ, &Translator::BNE,            // 0x5A
+            &Translator::BGE, &Translator::BGEU, &Translator::BGT, &Translator::BGTU, &Translator::BLE,            // 0x5F
+            &Translator::BLEU, &Translator::BLT, &Translator::BLTU, nullptr, nullptr,            // 0x64
+        };
 
     public:
         explicit Translator(llvm::LLVMContext &context, const VMConfig &config, const PoolItems &pool_items);
