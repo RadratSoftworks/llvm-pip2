@@ -199,7 +199,7 @@ namespace Pip2
 
             if (std::optional<std::uint32_t> immediate = Common::get_immediate_pip_dword(next_word))
             {
-                return addr + static_cast<std::int32_t>(immediate.value()) * 4;
+                return addr + static_cast<std::int32_t>(immediate.value());
             }
 
             if (pool_items.is_pool_item_terminate_function(next_word))
@@ -340,21 +340,21 @@ namespace Pip2
                                 {
                                     result_function.labels_.insert(jump_target.value());
                                 }
-
-                                mark_block_finished();
-
-                                // Non conditional block won't continue the current flow
-                                if (instruction.word_encoding.opcode != Opcode::JPl && instruction.word_encoding.opcode != Opcode::CALLl)
-                                {
-                                    current_going_through_block = addr + INSTRUCTION_SIZE;
-
-                                    unfinished_blocks_left.push_back(addr + INSTRUCTION_SIZE);
-                                    result_function.labels_.insert(addr + INSTRUCTION_SIZE);
-                                }
                             }
                             else
                             {
                                 suspecting_to_be_labels.insert(jump_target.value());
+                            }
+
+                            mark_block_finished();
+
+                            // Non conditional block won't continue the current flow
+                            if (instruction.word_encoding.opcode != Opcode::JPl && instruction.word_encoding.opcode != Opcode::CALLl)
+                            {
+                                current_going_through_block = addr + INSTRUCTION_SIZE;
+
+                                unfinished_blocks_left.push_back(addr + INSTRUCTION_SIZE);
+                                result_function.labels_.insert(addr + INSTRUCTION_SIZE);
                             }
                         }
                     }
@@ -464,10 +464,12 @@ namespace Pip2
                             std::uint32_t table_pool_index = memory_base_[(addr >> 2) - 1];
                             std::uint32_t table_pool_addr = pool_items_.get_pool_item_constant(table_pool_index);
 
+                            jump_table.jump_table_base_addr_ = table_pool_addr;
+
                             for (std::size_t i = 0; i < total_cases; i++)
                             {
                                 std::uint32_t case_addr = memory_base_[(table_pool_addr >> 2) + i];
-                                jump_table.labels_[i] = case_addr - text_base_;
+                                jump_table.labels_[i] = case_addr;
                                 suspecting_to_be_labels.insert(case_addr);
                             }
 

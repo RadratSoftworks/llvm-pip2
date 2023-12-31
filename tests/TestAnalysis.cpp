@@ -1,7 +1,14 @@
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
+
 #include <ProgramAnalysis.h>
+#include <Translator.h>
+
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/Support/FileSystem.h>
 
 int main(int argc, char **argv)
 {
@@ -48,6 +55,22 @@ int main(int argc, char **argv)
                                                pool_items_obj};
 
         auto funcs = program_analysis.analyze(0);
+
+        llvm::LLVMContext temp_context;
+
+        Pip2::VMConfig config(program_binary.data(), program_binary.size(), pool_items.data(), pool_items.size());
+        Pip2::VMOptions options {
+            .divide_by_zero_result_zero = true
+        };
+
+        Pip2::Translator translator(temp_context, config, options);
+        auto module = translator.translate(std::filesystem::path(path_program_binary).filename().string(), funcs);
+
+        std::error_code error_code;
+        llvm::raw_fd_ostream bitcode_stream(std::filesystem::path(path_program_binary).replace_extension(".bc").string(), error_code, llvm::sys::fs::OF_None);
+        llvm::WriteBitcodeToFile(*module, bitcode_stream);
+
+        module->dump();
     }
     catch (const std::exception &ex)
     {

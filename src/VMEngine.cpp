@@ -5,6 +5,11 @@
 #include <llvm/ExecutionEngine/MCJIT.h>
 
 namespace Pip2 {
+    VMEngine::VMEngine(const VMConfig &config, const VMOptions &options)
+        : config_(config), options_(options) {
+
+    }
+
     void VMEngine::initialize_mcjit() {
         if (!s_mcjit_initialized_) {
             llvm::InitializeNativeTarget();

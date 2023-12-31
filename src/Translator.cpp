@@ -4,8 +4,59 @@
 #include "Constants.h"
 
 #include <format>
+#include <iostream>
 
 namespace Pip2 {
+    static bool is_branch_cutoff(Instruction instruction)
+    {
+        switch (instruction.word_encoding.opcode)
+        {
+        case Opcode::BEQ:
+        case Opcode::BEQI:
+        case Opcode::BEQIB:
+        case Opcode::BNE:
+        case Opcode::BNEI:
+        case Opcode::BNEIB:
+        case Opcode::BLT:
+        case Opcode::BLTI:
+        case Opcode::BLTIB:
+        case Opcode::BLTU:
+        case Opcode::BLTUI:
+        case Opcode::BLTUIB:
+        case Opcode::BLE:
+        case Opcode::BLEI:
+        case Opcode::BLEIB:
+        case Opcode::BLEU:
+        case Opcode::BLEUI:
+        case Opcode::BLEUIB:
+        case Opcode::BGT:
+        case Opcode::BGTI:
+        case Opcode::BGTIB:
+        case Opcode::BGTU:
+        case Opcode::BGTUI:
+        case Opcode::BGTUIB:
+        case Opcode::BGE:
+        case Opcode::BGEI:
+        case Opcode::BGEIB:
+        case Opcode::BGEU:
+        case Opcode::BGEUI:
+        case Opcode::BGEUIB:
+        case Opcode::JPl:
+        case Opcode::RET:
+            return true;
+
+        case Opcode::JPr:
+            return (instruction.two_sources_encoding.rd != Register::RA);
+
+        case Opcode::CALLl:
+        case Opcode::CALLr:
+            return false;
+
+        default:
+            return false;
+        }
+    }
+
     std::uint32_t Translator::fetch_immediate() {
         std::uint32_t dword = *reinterpret_cast<std::uint32_t*>(config_.memory_base() + current_addr_ + INSTRUCTION_SIZE);
         current_addr_ += 4;
@@ -14,8 +65,8 @@ namespace Pip2 {
             return constant_dword.value();
         }
 
-        if (pool_items_.is_pool_item_constant(dword)) {
-            return pool_items_.get_pool_item_constant(dword);
+        if (config_.pool_items().is_pool_item_constant(dword)) {
+            return config_.pool_items().get_pool_item_constant(dword);
         }
 
         throw new std::runtime_error("Invalid immediate");
@@ -29,7 +80,7 @@ namespace Pip2 {
 
         return builder_.CreateGEP(context_type_,
                                   current_context_,
-                                  { builder_.getInt32(0), builder_.getInt32(reg >> 2) });
+                                  { builder_.getInt64(0), builder_.getInt64(reg >> 2) });
     }
 
     template <>
@@ -69,12 +120,31 @@ namespace Pip2 {
     void Translator::translate_function(llvm::Function *function, const Function &function_info) {
         blocks_.clear();
 
+        current_context_ = function->getArg(0);
+        current_memory_base_ = function->getArg(1);
+        current_function_lookup_array_ = function->getArg(2);
+        current_hle_handler_pointer_ = function->getArg(3);
+        current_hle_handler_callee_ = llvm::FunctionCallee(hle_handler_function_type_,
+                                                           builder_.CreateIntToPtr(function->getArg(3), hle_handler_function_type_->getPointerTo()));
+        current_function_analysis_ = &function_info;
+
         for (const auto &label: function_info.labels_) {
             blocks_.emplace(label, llvm::BasicBlock::Create(context_, std::format("label_{:08X}", label), function));
+            std::cout << "Create block label " << std::format("label_{:08X}", label) << std::endl;
         }
+
+        Instruction previous_inst = { 0 };
 
         for (current_addr_ = function_info.addr_; current_addr_ < function_info.addr_ + function_info.length_; current_addr_ += INSTRUCTION_SIZE) {
             if (blocks_.find(current_addr_) != blocks_.end()) {
+                // If not branching, it's continuous block
+                if (current_addr_ != function_info.addr_ && !is_branch_cutoff(previous_inst))
+                {
+                    builder_.CreateBr(blocks_[current_addr_]);
+                }
+
+                std::cout << "Set insert point to " << std::format("label_{:08X}", current_addr_) << std::endl;
+
                 builder_.SetInsertPoint(blocks_[current_addr_]);
             }
 
@@ -85,17 +155,22 @@ namespace Pip2 {
                 throw new std::runtime_error(std::format("Unhandled instruction: {}", (int)instruction.word_encoding.opcode));
             }
 
+            std::cout << (int)instruction.two_sources_encoding.opcode << std::endl;
+
             (this->*translator)(instruction);
+
+            previous_inst = instruction;
         }
     }
 
-    llvm::Module *Translator::translate(const std::string &module_name, const std::vector<Function> &functions) {
+    std::unique_ptr<llvm::Module> Translator::translate(const std::string &module_name, const std::vector<Function> &functions) {
         functions_.clear();
 
-        auto module = new llvm::Module(module_name, context_);
+        auto module = std::make_unique<llvm::Module>(module_name, context_);
 
         for (const Function &function: functions) {
-            functions_.emplace(function.addr_, module->getFunction(std::format("sub_{:08X}", function.addr_)));
+            functions_.emplace(function.addr_, llvm::Function::Create(function_type_, llvm::GlobalValue::ExternalLinkage,
+                               std::format("sub_{:08X}", function.addr_), module.get()));
         }
 
         for (const Function &function: functions) {
@@ -105,23 +180,39 @@ namespace Pip2 {
         return module;
     }
 
+    llvm::Type *Translator::get_pointer_integer_type()
+    {
+        return i64_type_;
+    }
+
     void Translator::initialize_types() {
         void_type_ = llvm::Type::getVoidTy(context_);
 
         i8_type_ = llvm::Type::getInt8Ty(context_);
         i16_type_ = llvm::Type::getInt16Ty(context_);
         i32_type_ = llvm::Type::getInt32Ty(context_);
+        i64_type_ = llvm::Type::getInt64Ty(context_);
 
         std::vector<llvm::Type*> context_element_types;
 
         context_element_types.insert(context_element_types.begin(), Register::TotalCount, i32_type_);
         context_type_ = llvm::StructType::create(context_, context_element_types, "VMContext");
+        function_type_ = llvm::FunctionType::get(void_type_, {
+                context_type_->getPointerTo(),                      // VMContext*
+                i32_type_->getPointerTo(),                          // std::uint32_t* memory_base
+                get_pointer_integer_type()->getPointerTo(),         // VMFunctionPointer* function_lookup_array
+                get_pointer_integer_type()->getPointerTo()          // HLEHandlerFunctionPointer hle_handler
+            },false);
+
+        hle_handler_function_type_ = llvm::FunctionType::get(void_type_, {
+                i32_type_
+            }, false);
     }
 
-    Translator::Translator(llvm::LLVMContext &context, const VMConfig &config, const PoolItems &pool_items)
+    Translator::Translator(llvm::LLVMContext &context, const VMConfig &config, const VMOptions &options)
         : context_(context)
         , config_(config)
-        , pool_items_(pool_items)
+        , options_(options)
         , builder_(context)
         , current_context_(nullptr)
         , void_type_(nullptr)

@@ -18,6 +18,12 @@ add_library(llvm-pip2
         Function.h
         Translator/Arthimetic.cpp
         Translator/ControlFlow.cpp
+        VMOptions.h
+        Translator/Miscs.cpp
+        Translator/LoadStore.cpp
+        Translator/Memory.cpp
+        ObjectCache.cpp
+        ObjectCache.h
 )
 
 target_include_directories(llvm-pip2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 #include <vector>
 #include <set>
@@ -6,6 +8,7 @@ namespace Pip2 {
     struct JumpTable
     {
         std::uint32_t jump_instruction_addr_;
+        std::uint32_t jump_table_base_addr_;
         std::vector<std::size_t> labels_;
     };
 
