@@ -80,7 +80,7 @@ namespace Pip2 {
 
         return builder_.CreateGEP(context_type_,
                                   current_context_,
-                                  { builder_.getInt64(0), builder_.getInt64(reg >> 2) });
+                                  { builder_.getInt32(0), builder_.getInt32(reg >> 2) });
     }
 
     template <>
@@ -117,6 +117,8 @@ namespace Pip2 {
         builder_.CreateStore(value, get_register_pointer(dest));
     }
 
+    bool blocking = false;
+
     void Translator::translate_function(llvm::Function *function, const Function &function_info) {
         blocks_.clear();
 
@@ -130,7 +132,6 @@ namespace Pip2 {
 
         for (const auto &label: function_info.labels_) {
             blocks_.emplace(label, llvm::BasicBlock::Create(context_, std::format("label_{:08X}", label), function));
-            std::cout << "Create block label " << std::format("label_{:08X}", label) << std::endl;
         }
 
         Instruction previous_inst = { 0 };
@@ -143,8 +144,6 @@ namespace Pip2 {
                     builder_.CreateBr(blocks_[current_addr_]);
                 }
 
-                std::cout << "Set insert point to " << std::format("label_{:08X}", current_addr_) << std::endl;
-
                 builder_.SetInsertPoint(blocks_[current_addr_]);
             }
 
@@ -155,12 +154,35 @@ namespace Pip2 {
                 throw new std::runtime_error(std::format("Unhandled instruction: {}", (int)instruction.word_encoding.opcode));
             }
 
-            std::cout << (int)instruction.two_sources_encoding.opcode << std::endl;
-
             (this->*translator)(instruction);
 
             previous_inst = instruction;
         }
+    }
+
+    void Translator::generate_entry_point_function(const std::uint32_t entry_point_addr) {
+        auto entry_point_sub = functions_[entry_point_addr];
+        auto entry_point_func = llvm::Function::Create(function_type_, llvm::GlobalValue::ExternalLinkage,
+                                                       "entry_point", entry_point_sub->getParent());
+
+        auto entry_point_block = llvm::BasicBlock::Create(context_, "1", entry_point_func);
+        builder_.SetInsertPoint(entry_point_block);
+
+        auto lookup_table = entry_point_func->getArg(2);
+
+        for (const auto &[addr, function_llvm]: functions_) {
+            auto function_pointer = builder_.CreateGEP(get_pointer_integer_type(), lookup_table, { builder_.getInt32(addr >> 2) });
+            builder_.CreateStore(function_llvm, function_pointer);
+        }
+
+        builder_.CreateCall(entry_point_sub, {
+            entry_point_func->getArg(0),
+            entry_point_func->getArg(1),
+            entry_point_func->getArg(2),
+            entry_point_func->getArg(3)
+        });
+
+        builder_.CreateRetVoid();
     }
 
     std::unique_ptr<llvm::Module> Translator::translate(const std::string &module_name, const std::vector<Function> &functions) {
@@ -175,6 +197,12 @@ namespace Pip2 {
 
         for (const Function &function: functions) {
             translate_function(functions_[function.addr_], function);
+        }
+
+        // Generate entry point function, which also setup the lookup table
+        for (const Function &function: functions) {
+            generate_entry_point_function(function.addr_);
+            break;
         }
 
         return module;

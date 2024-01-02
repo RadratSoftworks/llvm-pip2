@@ -45,6 +45,6 @@ namespace Pip2
 
         PC = 128,
 
-        TotalCount = PC / 4
+        TotalCount = (PC / 4) + 1
     };
 }

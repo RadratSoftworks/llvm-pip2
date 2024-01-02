@@ -526,7 +526,10 @@ namespace Pip2
                 continue;
             }
 
-            results.push_back(sweep_function(addr));
+            Function sweeped = sweep_function(addr);
+            sweeped.is_entry_point_ = (addr == entry_point_addr + text_base_);
+
+            results.push_back(sweeped);
         }
 
         return results;

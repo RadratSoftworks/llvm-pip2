@@ -5,10 +5,20 @@
 
 #include <ProgramAnalysis.h>
 #include <Translator.h>
+#include <VMEngine.h>
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/Support/FileSystem.h>
+
+#ifdef _alloca
+#undef _alloca
+extern "C" {
+void* _alloca(std::size_t _Size) {
+    return __builtin_alloca(_Size);
+}
+}
+#endif
 
 int main(int argc, char **argv)
 {
@@ -60,11 +70,14 @@ int main(int argc, char **argv)
 
         Pip2::VMConfig config(program_binary.data(), program_binary.size(), pool_items.data(), pool_items.size());
         Pip2::VMOptions options {
-            .divide_by_zero_result_zero = true
+            .divide_by_zero_result_zero = true,
+            .cache_ = false
         };
 
         Pip2::Translator translator(temp_context, config, options);
         auto module = translator.translate(std::filesystem::path(path_program_binary).filename().string(), funcs);
+
+        Pip2::VMEngine::default_optimize(*module);
 
         std::error_code error_code;
         llvm::raw_fd_ostream bitcode_stream(std::filesystem::path(path_program_binary).replace_extension(".bc").string(), error_code, llvm::sys::fs::OF_None);

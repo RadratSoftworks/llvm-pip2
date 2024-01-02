@@ -53,12 +53,13 @@ namespace Pip2
         void initialize_types();
 
         void translate_function(llvm::Function *function, const Function &function_info);
+        void generate_entry_point_function(std::uint32_t entry_point_addr);
 
         llvm::Value *get_register_pointer(Register reg);
         llvm::Value *get_memory_pointer(llvm::Value *address);
 
         void set_register(Register dest, llvm::Value *value);
-        void update_pc();
+        void update_pc_to_next_instruction();
 
         template <typename T>
         llvm::Value *get_register(Register src);

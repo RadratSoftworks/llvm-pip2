@@ -150,7 +150,7 @@ namespace Pip2 {
         builder_.CreateBr(blocks_[address]);
     }
 
-    void Translator::update_pc()
+    void Translator::update_pc_to_next_instruction()
     {
         set_register(Register::PC, builder_.getInt32(current_addr_ + INSTRUCTION_SIZE));
     }
@@ -162,6 +162,9 @@ namespace Pip2 {
         if (std::optional<std::uint32_t> imm_offset = Common::get_immediate_pip_dword(next_word)) {
             auto address = current_addr_ + static_cast<std::int32_t>(imm_offset.value());
 
+            set_register(Register::RA, builder_.getInt32(current_addr_ + INSTRUCTION_SIZE));
+            set_register(Register::PC, builder_.getInt32(address));
+
             builder_.CreateCall(functions_[address], {
                 current_context_,
                 current_memory_base_,
@@ -171,7 +174,9 @@ namespace Pip2 {
         } else {
             if (config_.pool_items().is_pool_item_constant(next_word)) {
                 auto function_addr = config_.pool_items().get_pool_item_constant(next_word);
-                update_pc();
+
+                set_register(Register::RA, builder_.getInt32(current_addr_ + INSTRUCTION_SIZE));
+                set_register(Register::PC, builder_.getInt32(function_addr));
 
                 builder_.CreateCall(functions_[function_addr], {
                         current_context_,
@@ -180,8 +185,14 @@ namespace Pip2 {
                         current_hle_handler_pointer_
                 });
             } else {
-                update_pc();
+                update_pc_to_next_instruction();
+
                 builder_.CreateCall(current_hle_handler_callee_, { builder_.getInt32(next_word) });
+
+                if (config_.pool_items().is_pool_item_terminate_function(next_word))
+                {
+                    builder_.CreateRetVoid();
+                }
             }
         }
     }
@@ -190,6 +201,7 @@ namespace Pip2 {
     {
         if (instruction.two_sources_encoding.rd == Register::RA)
         {
+            set_register(Register::PC, get_register<std::uint32_t>(instruction.two_sources_encoding.rd));
             builder_.CreateRetVoid();
             return;
         }
@@ -203,16 +215,16 @@ namespace Pip2 {
 
         if (jump_table == current_function_analysis_->jump_tables_.end())
         {
+            auto target = get_register<std::uint32_t>(instruction.two_sources_encoding.rd);
+
             auto func_ptr_ptr = builder_.CreateGEP(get_pointer_integer_type(), current_function_lookup_array_, {
-                    builder_.getInt32(0),
-                    builder_.CreateLShr(
-                            get_register<std::uint32_t>(instruction.two_sources_encoding.rd),
-                            builder_.getInt32(2)
-                            )
+                    builder_.CreateLShr(target, builder_.getInt32(2))
             });
 
             auto func_ptr = builder_.CreateLoad(get_pointer_integer_type(), func_ptr_ptr);
             auto func_callee = llvm::FunctionCallee(function_type_, builder_.CreateIntToPtr(func_ptr, function_type_->getPointerTo()));
+
+            set_register(Register::PC, target);
 
             builder_.CreateCall(func_callee, {
                     current_context_,
@@ -243,16 +255,16 @@ namespace Pip2 {
 
     void Translator::CALLr(Instruction instruction)
     {
+        auto target = get_register<std::uint32_t>(instruction.two_sources_encoding.rd);
         auto func_ptr_ptr = builder_.CreateGEP(get_pointer_integer_type(), current_function_lookup_array_, {
-                builder_.getInt32(0),
-                builder_.CreateLShr(
-                        get_register<std::uint32_t>(instruction.two_sources_encoding.rd),
-                        builder_.getInt32(2)
-                        )
+                builder_.CreateLShr(target,builder_.getInt32(2))
         });
 
         auto func_ptr = builder_.CreateLoad(get_pointer_integer_type(), func_ptr_ptr);
         auto func_callee = llvm::FunctionCallee(function_type_, builder_.CreateIntToPtr(func_ptr, function_type_->getPointerTo()));
+
+        set_register(Register::RA, builder_.getInt32(current_addr_ + INSTRUCTION_SIZE));
+        set_register(Register::PC, target);
 
         builder_.CreateCall(func_callee, {
                 current_context_,
@@ -265,6 +277,8 @@ namespace Pip2 {
     void Translator::RET(Instruction instruction)
     {
         RESTORE(instruction);
+
+        set_register(Register::PC, get_register<std::uint32_t>(Register::RA));
         builder_.CreateRetVoid();
     }
 }

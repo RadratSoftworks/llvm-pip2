@@ -20,5 +20,7 @@ namespace Pip2 {
         // Label separate function into code blocks
         std::set<std::uint32_t> labels_;
         std::vector<JumpTable> jump_tables_;
+
+        bool is_entry_point_;
     };
 }

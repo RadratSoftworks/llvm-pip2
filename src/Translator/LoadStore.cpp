@@ -5,7 +5,7 @@ namespace Pip2
 {
     llvm::Value *Translator::get_memory_pointer(llvm::Value *address)
     {
-        return builder_.CreateGEP(i8_type_, current_memory_base_, { builder_.getInt32(0), address });
+        return builder_.CreateGEP(i8_type_, current_memory_base_, { address });
     }
 
     void Translator::LDI(Instruction instruction)
@@ -80,7 +80,7 @@ namespace Pip2
 
         if (instruction.range_reg_encoding.rs == Register::ZR)
         {
-            set_register(Register::RA, builder_.CreateLoad(i32_type_, builder_.CreateGEP(i32_type_, stack, { builder_.getInt64(0), builder_.getInt64(-1) })));
+            set_register(Register::RA, builder_.CreateLoad(i32_type_, builder_.CreateGEP(i32_type_, stack, { builder_.getInt64(-1) })));
             set_register(Register::SP, builder_.CreateSub(stack_value, builder_.getInt32(4)));
         }
         else
@@ -88,7 +88,7 @@ namespace Pip2
             auto reg_addr = get_register_pointer(instruction.range_reg_encoding.rs);
 
             builder_.CreateMemCpy(
-                    builder_.CreateGEP(i32_type_, stack, { builder_.getInt64(0), builder_.getInt64(-(instruction.range_reg_encoding.count + 1)) }),
+                    builder_.CreateGEP(i32_type_, stack, { builder_.getInt64(-(instruction.range_reg_encoding.count + 1)) }),
                     llvm::MaybeAlign(4),
                     reg_addr,
                     llvm::MaybeAlign(4),
