@@ -69,13 +69,13 @@ namespace Pip2 {
             return config_.pool_items().get_pool_item_constant(dword);
         }
 
-        throw new std::runtime_error("Invalid immediate");
+        throw std::runtime_error("Invalid immediate");
     }
 
     llvm::Value *Translator::get_register_pointer(const Register reg) {
         if ((reg & 3) != 0)
         {
-            throw new std::runtime_error("Invalid register");
+            throw std::runtime_error("Invalid register");
         }
 
         return builder_.CreateGEP(context_type_,
@@ -117,8 +117,6 @@ namespace Pip2 {
         builder_.CreateStore(value, get_register_pointer(dest));
     }
 
-    bool blocking = false;
-
     void Translator::translate_function(llvm::Function *function, const Function &function_info) {
         blocks_.clear();
 
@@ -151,7 +149,7 @@ namespace Pip2 {
             InstructionTranslator translator = instruction_translators_[instruction.word_encoding.opcode];
 
             if (translator == nullptr) {
-                throw new std::runtime_error(std::format("Unhandled instruction: {}", (int)instruction.word_encoding.opcode));
+                throw std::runtime_error(std::format("Unhandled instruction: {}", (int)instruction.word_encoding.opcode));
             }
 
             (this->*translator)(instruction);
@@ -227,7 +225,7 @@ namespace Pip2 {
         context_type_ = llvm::StructType::create(context_, context_element_types, "VMContext");
         function_type_ = llvm::FunctionType::get(void_type_, {
                 context_type_->getPointerTo(),                      // VMContext*
-                i32_type_->getPointerTo(),                          // std::uint32_t* memory_base
+                i8_type_->getPointerTo(),                           // std::uint8_t* memory_base
                 get_pointer_integer_type()->getPointerTo(),         // VMFunctionPointer* function_lookup_array
                 get_pointer_integer_type()->getPointerTo()          // HLEHandlerFunctionPointer hle_handler
             },false);

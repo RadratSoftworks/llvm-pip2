@@ -11,14 +11,7 @@
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/Support/FileSystem.h>
 
-#ifdef _alloca
-#undef _alloca
-extern "C" {
-void* _alloca(std::size_t _Size) {
-    return __builtin_alloca(_Size);
-}
-}
-#endif
+#include <LinkerFix.h>
 
 int main(int argc, char **argv)
 {

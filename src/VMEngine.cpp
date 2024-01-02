@@ -136,4 +136,20 @@ namespace Pip2 {
 
         found_runtime_function_(context_, reinterpret_cast<std::uint32_t*>(config_.memory_base()), runtime_function_lookup_.data(), nullptr);
     }
+
+    std::uint32_t VMEngine::reg(Register reg) const {
+        if (reg > Register::PC) {
+            throw std::runtime_error("Invalid register");
+        }
+
+        return context_.regs_[reg >> 2];
+    }
+
+    void VMEngine::reg(Register reg, std::uint32_t value) {
+        if (reg > Register::PC) {
+            throw std::runtime_error("Invalid register");
+        }
+
+        context_.regs_[reg >> 2] = value;
+    }
 }

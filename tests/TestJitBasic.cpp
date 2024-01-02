@@ -1,19 +1,11 @@
-#include "VMEngine.h"
-#include "Instruction.h"
-#include "Opcode.h"
-#include "VMConfig.h"
-#include "VMOptions.h"
+#include <VMEngine.h>
+#include <Instruction.h>
+#include <Opcode.h>
+#include <VMConfig.h>
+#include <VMOptions.h>
+#include <LinkerFix.h>
 
 using namespace Pip2;
-
-#ifdef _alloca
-#undef _alloca
-extern "C" {
-void* _alloca(std::size_t _Size) {
-    return __builtin_alloca(_Size);
-}
-}
-#endif
 
 int main(int argc, char **argv) {
     Instruction instructions[] = {

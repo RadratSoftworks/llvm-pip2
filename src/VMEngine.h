@@ -50,6 +50,9 @@ namespace Pip2 {
 
         virtual void execute();
 
+        virtual std::uint32_t reg(Register reg) const;
+        virtual void reg(Register reg, std::uint32_t value);
+
         [[nodiscard]] VMContext &context() { return context_; }
         [[nodiscard]] const VMContext &context() const { return context_; }
     };

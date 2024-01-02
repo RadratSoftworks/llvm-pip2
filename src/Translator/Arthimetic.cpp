@@ -33,7 +33,7 @@ namespace Pip2
         auto lhs = get_register<std::uint16_t>(instruction.two_sources_encoding.rs);
         auto rhs = Common::sign_extend_to_word(instruction.two_sources_encoding.rt);
 
-        set_register(instruction.two_sources_encoding.rd, builder_.CreateAdd(lhs, builder_.getInt16( rhs)));
+        set_register(instruction.two_sources_encoding.rd, builder_.CreateAdd(lhs, builder_.getInt16(rhs)));
     }
 
     void Translator::ADDB(Instruction instruction)

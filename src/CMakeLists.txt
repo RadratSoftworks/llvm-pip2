@@ -24,6 +24,7 @@ add_library(llvm-pip2
         Translator/Memory.cpp
         ObjectCache.cpp
         ObjectCache.h
+        LinkerFix.h
 )
 
 target_include_directories(llvm-pip2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
