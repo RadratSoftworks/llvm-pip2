@@ -8,6 +8,8 @@ add_executable(TestUnits
         units/ModifiablePoolItems.h
         units/TestArithmetic.cpp
         units/RandomIntGenerator.h
+        units/TestMiscs.cpp
+        units/TestLoadStore.cpp
 )
 
 target_link_libraries(TestEmit PRIVATE llvm-pip2 llvm nlohmann_json::nlohmann_json)

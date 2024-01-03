@@ -28,4 +28,10 @@ namespace Pip2::Test {
     {
         return RandomIntGenerator<T>(0, 0x80000000);
     }
+
+    template<typename T>
+    RandomIntGenerator<T> make_normal_constant_random_generator()
+    {
+        return RandomIntGenerator<T>(0, 0x10000000);
+    }
 }

@@ -134,6 +134,8 @@ namespace Pip2 {
 
         Instruction previous_inst = { 0 };
 
+        current_function_ = function;
+
         for (current_addr_ = function_info.addr_; current_addr_ < function_info.addr_ + function_info.length_; current_addr_ += INSTRUCTION_SIZE) {
             if (blocks_.find(current_addr_) != blocks_.end()) {
                 // If not branching, it's continuous block

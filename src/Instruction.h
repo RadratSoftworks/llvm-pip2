@@ -74,7 +74,18 @@ namespace Pip2
         };
     }
 
-    inline Instruction make_unary_instruction(Opcode opcode, Register rd)
+    inline Instruction make_unary_instruction(Opcode opcode, Register rd, Register rs)
+    {
+        return Instruction {
+                .two_sources_encoding = {
+                        .opcode = opcode,
+                        .rd = rd,
+                        .rs = rs
+                }
+        };
+    }
+
+    inline Instruction make_single_argument_instruction(Opcode opcode, Register rd)
     {
         return Instruction {
             .dest_only_encoding = {
@@ -88,6 +99,13 @@ namespace Pip2
     {
         return Instruction {
             .value = value
+        };
+    }
+
+    inline Instruction make_constant(std::uint32_t value)
+    {
+        return Instruction {
+                .value = value | 0x80000000
         };
     }
 }

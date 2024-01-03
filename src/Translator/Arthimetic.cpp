@@ -235,6 +235,7 @@ namespace Pip2
 
             builder_.SetInsertPoint(divide_block);
             auto divide_value = builder_.CreateSDiv(get_register<std::int32_t>(instruction.two_sources_encoding.rs), rhs);
+            builder_.CreateBr(result_block);
 
             builder_.SetInsertPoint(result_block);
             auto phi = builder_.CreatePHI(i32_type_, 2);
@@ -265,6 +266,7 @@ namespace Pip2
 
             builder_.SetInsertPoint(divide_block);
             auto divide_value = builder_.CreateUDiv(get_register<std::int32_t>(instruction.two_sources_encoding.rs), rhs);
+            builder_.CreateBr(result_block);
 
             builder_.SetInsertPoint(result_block);
             auto phi = builder_.CreatePHI(i32_type_, 2);
@@ -333,7 +335,7 @@ namespace Pip2
     void Translator::SLLH(Instruction instruction)
     {
         auto lhs = get_register<std::uint16_t>(instruction.two_sources_encoding.rs);
-        auto rhs = get_register<std::uint16_t>(instruction.two_sources_encoding.rt);
+        auto rhs = builder_.getInt16(instruction.two_sources_encoding.rt & 0xF);
 
         set_register(instruction.two_sources_encoding.rd, builder_.CreateShl(lhs, rhs));
     }
@@ -341,7 +343,7 @@ namespace Pip2
     void Translator::SLLB(Instruction instruction)
     {
         auto lhs = get_register<std::uint8_t>(instruction.two_sources_encoding.rs);
-        auto rhs = get_register<std::uint8_t>(instruction.two_sources_encoding.rt);
+        auto rhs = builder_.getInt8(instruction.two_sources_encoding.rt & 0x7);
 
         set_register(instruction.two_sources_encoding.rd, builder_.CreateShl(lhs, rhs));
     }
@@ -365,7 +367,7 @@ namespace Pip2
     void Translator::SRLH(Instruction instruction)
     {
         auto lhs = get_register<std::uint16_t>(instruction.two_sources_encoding.rs);
-        auto rhs = get_register<std::uint16_t>(instruction.two_sources_encoding.rt);
+        auto rhs = builder_.getInt16(instruction.two_sources_encoding.rt & 0xF);
 
         set_register(instruction.two_sources_encoding.rd, builder_.CreateLShr(lhs, rhs));
     }
@@ -373,7 +375,7 @@ namespace Pip2
     void Translator::SRLB(Instruction instruction)
     {
         auto lhs = get_register<std::uint8_t>(instruction.two_sources_encoding.rs);
-        auto rhs = get_register<std::uint8_t>(instruction.two_sources_encoding.rt);
+        auto rhs = builder_.getInt8(instruction.two_sources_encoding.rt & 0x7);
 
         set_register(instruction.two_sources_encoding.rd, builder_.CreateLShr(lhs, rhs));
     }
@@ -397,7 +399,7 @@ namespace Pip2
     void Translator::SRAH(Instruction instruction)
     {
         auto lhs = get_register<std::int16_t>(instruction.two_sources_encoding.rs);
-        auto rhs = get_register<std::int16_t>(instruction.two_sources_encoding.rt);
+        auto rhs = builder_.getInt16(instruction.two_sources_encoding.rt & 0xF);
 
         set_register(instruction.two_sources_encoding.rd, builder_.CreateAShr(lhs, rhs));
     }
@@ -405,7 +407,7 @@ namespace Pip2
     void Translator::SRAB(Instruction instruction)
     {
         auto lhs = get_register<std::int8_t>(instruction.two_sources_encoding.rs);
-        auto rhs = get_register<std::int8_t>(instruction.two_sources_encoding.rt);
+        auto rhs = builder_.getInt8(instruction.two_sources_encoding.rt & 0x7);
 
         set_register(instruction.two_sources_encoding.rd, builder_.CreateAShr(lhs, rhs));
     }

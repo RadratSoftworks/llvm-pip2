@@ -17,6 +17,7 @@ namespace Pip2::Test {
         std::vector<std::uint8_t> memory_;
         std::uint32_t text_size_;
         std::uint32_t stack_size_;
+        std::uint32_t heap_size_;
 
         std::unique_ptr<VMConfig> vm_config_;
         std::unique_ptr<Pip2::VMEngine> engine_;
@@ -30,7 +31,8 @@ namespace Pip2::Test {
     public:
         explicit TestEnvironment(const std::string &case_name, std::vector<Pip2::Instruction> instructions,
                                  ModifiablePoolItems &&pool_items,
-                                 std::uint32_t stack_size);
+                                 std::uint32_t stack_size,
+                                 std::uint32_t heap_size = 0);
 
         ~TestEnvironment() = default;
 
@@ -38,6 +40,11 @@ namespace Pip2::Test {
         std::uint32_t reg(Pip2::Register reg) const;
 
         std::uint8_t *stack();
+        std::uint8_t *heap();
+
+        std::uint32_t heap_address() const {
+            return text_size_ + stack_size_;
+        }
 
         void run();
     };

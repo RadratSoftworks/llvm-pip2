@@ -3,16 +3,19 @@
 namespace Pip2::Test {
     TestEnvironment::TestEnvironment(const std::string &case_name, std::vector<Pip2::Instruction> instructions,
                                      ModifiablePoolItems &&pool_items,
-                                     std::uint32_t stack_size)
+                                     std::uint32_t stack_size,
+                                     std::uint32_t heap_size)
          : pool_items_(pool_items)
          , engine_(nullptr)
+         , stack_size_(stack_size)
+         , heap_size_(heap_size)
      {
         pool_items_built_ = pool_items.build();
 
         text_size_ = instructions.size() * sizeof(Pip2::Instruction);
         stack_size_ = stack_size;
 
-        memory_.resize(text_size_ + stack_size_);
+        memory_.resize(text_size_ + stack_size_ + heap_size_);
 
         std::memset(memory_.data(), 0, memory_.size());
         std::memcpy(memory_.data(), instructions.data(), text_size_);
@@ -43,6 +46,10 @@ namespace Pip2::Test {
     std::uint8_t *TestEnvironment::stack()
     {
         return memory_.data() + text_size_;
+    }
+
+    std::uint8_t *TestEnvironment::heap() {
+        return memory_.data() + text_size_ + stack_size_;
     }
 
     void TestEnvironment::run()
