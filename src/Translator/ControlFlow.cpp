@@ -169,7 +169,8 @@ namespace Pip2 {
                 current_context_,
                 current_memory_base_,
                 current_function_lookup_array_,
-                current_hle_handler_pointer_
+                current_hle_handler_pointer_,
+                current_hle_handler_userdata_
             });
         } else {
             if (config_.pool_items().is_pool_item_constant(next_word)) {
@@ -182,12 +183,13 @@ namespace Pip2 {
                         current_context_,
                         current_memory_base_,
                         current_function_lookup_array_,
-                        current_hle_handler_pointer_
+                        current_hle_handler_pointer_,
+                        current_hle_handler_userdata_
                 });
             } else {
                 update_pc_to_next_instruction();
 
-                builder_.CreateCall(current_hle_handler_callee_, { builder_.getInt32(next_word) });
+                builder_.CreateCall(current_hle_handler_callee_, { current_hle_handler_userdata_, builder_.getInt32(next_word) });
 
                 if (config_.pool_items().is_pool_item_terminate_function(next_word))
                 {
@@ -230,7 +232,8 @@ namespace Pip2 {
                     current_context_,
                     current_memory_base_,
                     current_function_lookup_array_,
-                    current_hle_handler_pointer_
+                    current_hle_handler_pointer_,
+                    current_hle_handler_userdata_
             });
 
             builder_.CreateRetVoid();
@@ -270,7 +273,8 @@ namespace Pip2 {
                 current_context_,
                 current_memory_base_,
                 current_function_lookup_array_,
-                current_hle_handler_pointer_
+                current_hle_handler_pointer_,
+                current_hle_handler_userdata_
         });
     }
 

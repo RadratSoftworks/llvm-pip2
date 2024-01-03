@@ -126,6 +126,7 @@ namespace Pip2 {
         current_hle_handler_pointer_ = function->getArg(3);
         current_hle_handler_callee_ = llvm::FunctionCallee(hle_handler_function_type_,
                                                            builder_.CreateIntToPtr(function->getArg(3), hle_handler_function_type_->getPointerTo()));
+        current_hle_handler_userdata_ = function->getArg(4);
         current_function_analysis_ = &function_info;
 
         for (const auto &label: function_info.labels_) {
@@ -179,7 +180,8 @@ namespace Pip2 {
             entry_point_func->getArg(0),
             entry_point_func->getArg(1),
             entry_point_func->getArg(2),
-            entry_point_func->getArg(3)
+            entry_point_func->getArg(3),
+            entry_point_func->getArg(4)
         });
 
         builder_.CreateRetVoid();
@@ -229,10 +231,12 @@ namespace Pip2 {
                 context_type_->getPointerTo(),                      // VMContext*
                 i8_type_->getPointerTo(),                           // std::uint8_t* memory_base
                 get_pointer_integer_type()->getPointerTo(),         // VMFunctionPointer* function_lookup_array
-                get_pointer_integer_type()->getPointerTo()          // HLEHandlerFunctionPointer hle_handler
+                get_pointer_integer_type()->getPointerTo(),         // HLEHandlerFunctionPointer hle_handler
+                i8_type_->getPointerTo()                          // void* hle_handler_userdata
             },false);
 
         hle_handler_function_type_ = llvm::FunctionType::get(void_type_, {
+                i8_type_->getPointerTo(),
                 i32_type_
             }, false);
     }

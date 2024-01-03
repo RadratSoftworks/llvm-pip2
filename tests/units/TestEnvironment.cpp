@@ -52,8 +52,8 @@ namespace Pip2::Test {
         return memory_.data() + text_size_ + stack_size_;
     }
 
-    void TestEnvironment::run()
+    void TestEnvironment::run(HleHandler handler, void *userdata)
     {
-        engine_->execute();
+        engine_->execute(handler, userdata);
     }
 }

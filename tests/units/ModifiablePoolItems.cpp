@@ -52,4 +52,28 @@ namespace Pip2::Test {
 
         return pool_items;
     }
+
+    void ModifiablePoolItems::hle_handler(const int code)
+    {
+        if (code <= 0 || code > pool_items_.size()) {
+            throw std::runtime_error("Invalid HLE code");
+        }
+
+        auto &item = pool_items_[code - 1];
+
+        if (item.func_ == nullptr) {
+            throw std::runtime_error("Invalid HLE code");
+        }
+
+        item.func_(item.func_userdata_);
+    }
+
+    void modifiable_pool_items_hle_handler(void *self, const int code)
+    {
+        auto *items = reinterpret_cast<ModifiablePoolItems*>(self);
+
+        if (items != nullptr) {
+            items->hle_handler(code);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-add_library(llvm-pip2
+add_library(llvm-pip2 SHARED
         Constants.h
         Instruction.h
         Opcode.h
@@ -26,6 +26,7 @@ add_library(llvm-pip2
         ObjectCache.h
         LinkerFix.h
         LinkerFix.cpp
+        CInterface.cpp
 )
 
 target_include_directories(llvm-pip2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

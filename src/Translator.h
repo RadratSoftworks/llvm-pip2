@@ -39,6 +39,7 @@ namespace Pip2
         llvm::Value *current_memory_base_;
         llvm::Value *current_function_lookup_array_;
         llvm::Value *current_hle_handler_pointer_;
+        llvm::Value *current_hle_handler_userdata_;
         llvm::FunctionCallee current_hle_handler_callee_;
         llvm::Function *current_function_;
 

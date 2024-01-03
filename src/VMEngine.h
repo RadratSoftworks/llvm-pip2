@@ -13,9 +13,9 @@ namespace Pip2 {
     struct VMConfig;
     struct VMOptions;
 
-    typedef void (*HleHandler)(int hleFunctionCode);
+    typedef void (*HleHandler)(void *userdata, int hleFunctionCode);
     typedef void (*RuntimeFunction)(VMContext &context, std::uint32_t *memory_base, void **runtime_function_lookup,
-                                    HleHandler hle_handler);
+                                    HleHandler hle_handler, void *userdata);
 
     class VMEngine {
     private:
@@ -48,7 +48,7 @@ namespace Pip2 {
         explicit VMEngine(std::string module_name, const VMConfig &config, const VMOptions &options);
         virtual ~VMEngine() = default;
 
-        virtual void execute();
+        virtual void execute(HleHandler handler = nullptr, void *userdata = nullptr);
 
         virtual std::uint32_t reg(Register reg) const;
         virtual void reg(Register reg, std::uint32_t value);

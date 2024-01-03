@@ -126,7 +126,7 @@ namespace Pip2 {
         }
     }
 
-    void VMEngine::execute() {
+    void VMEngine::execute(HleHandler hle_handler, void *userdata) {
         if (!found_runtime_function_) {
             static constexpr std::size_t TOTAL_LOOKUP_STORAGE = 0x2000;
 
@@ -134,7 +134,7 @@ namespace Pip2 {
             runtime_function_lookup_.resize(TOTAL_LOOKUP_STORAGE);
         }
 
-        found_runtime_function_(context_, reinterpret_cast<std::uint32_t*>(config_.memory_base()), runtime_function_lookup_.data(), nullptr);
+        found_runtime_function_(context_, reinterpret_cast<std::uint32_t*>(config_.memory_base()), runtime_function_lookup_.data(), hle_handler, userdata);
     }
 
     std::uint32_t VMEngine::reg(Register reg) const {

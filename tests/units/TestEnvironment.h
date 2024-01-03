@@ -46,6 +46,6 @@ namespace Pip2::Test {
             return text_size_ + stack_size_;
         }
 
-        void run();
+        void run(HleHandler handler = nullptr, void *userdata = nullptr);
     };
 }
