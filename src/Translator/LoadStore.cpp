@@ -31,14 +31,14 @@ namespace Pip2
     {
         auto address = builder_.CreateAdd(get_register<std::uint32_t>(instruction.two_sources_encoding.rs), llvm::ConstantInt::get(i32_type_, fetch_immediate()));
         auto value = builder_.CreateLoad(i16_type_, get_memory_pointer(address));
-        set_register(instruction.two_sources_encoding.rd, value);
+        set_register(instruction.two_sources_encoding.rd, builder_.CreateZExt(value, i32_type_));
     }
 
     void Translator::LDBUd(Instruction instruction)
     {
         auto address = builder_.CreateAdd(get_register<std::uint32_t>(instruction.two_sources_encoding.rs), llvm::ConstantInt::get(i32_type_, fetch_immediate()));
         auto value = builder_.CreateLoad(i8_type_, get_memory_pointer(address));
-        set_register(instruction.two_sources_encoding.rd, value);
+        set_register(instruction.two_sources_encoding.rd, builder_.CreateZExt(value, i32_type_));
     }
 
     void Translator::LDHd(Instruction instruction)

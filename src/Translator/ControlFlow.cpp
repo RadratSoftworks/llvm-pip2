@@ -7,7 +7,7 @@ namespace Pip2 {
                                                          bool offset_in_instruction, bool signed_compare) {
         auto lhs = get_register<std::uint32_t>(instruction.two_sources_encoding.rd);
         auto rhs = offset_in_instruction ?
-                (signed_compare ? builder_.getInt32(Common::sign_extend(instruction.two_sources_encoding.rt)) : builder_.getInt32(instruction.two_sources_encoding.rt)) :
+                (signed_compare ? builder_.getInt32(Common::sign_extend(instruction.two_sources_encoding.rs)) : builder_.getInt32(instruction.two_sources_encoding.rs)) :
                 get_register<std::uint32_t>(instruction.two_sources_encoding.rs);
         auto branch_offset = offset_in_instruction ? static_cast<std::int8_t>(instruction.two_sources_encoding.rt) * 4 : (static_cast<std::int32_t>(fetch_immediate()) - 4);
 
@@ -66,11 +66,11 @@ namespace Pip2 {
     }
 
     void Translator::BEQi(Instruction instruction) {
-        create_compare_two_registers_branch(instruction, llvm::CmpInst::Predicate::ICMP_EQ, true, false);
+        create_compare_two_registers_branch(instruction, llvm::CmpInst::Predicate::ICMP_EQ, true, true);
     }
 
     void Translator::BNEi(Instruction instruction) {
-        create_compare_two_registers_branch(instruction, llvm::CmpInst::Predicate::ICMP_NE, true, false);
+        create_compare_two_registers_branch(instruction, llvm::CmpInst::Predicate::ICMP_NE, true, true);
     }
 
     void Translator::BGEi(Instruction instruction) {
@@ -147,6 +147,8 @@ namespace Pip2 {
 
     void Translator::JPl(Instruction instruction) {
         auto address = current_addr_ + static_cast<std::int32_t>(fetch_immediate());
+        set_register(Register::PC, builder_.getInt32(address));
+
         builder_.CreateBr(blocks_[address]);
     }
 
@@ -160,7 +162,7 @@ namespace Pip2 {
         current_addr_ += 4;
 
         if (std::optional<std::uint32_t> imm_offset = Common::get_immediate_pip_dword(next_word)) {
-            auto address = current_addr_ + static_cast<std::int32_t>(imm_offset.value());
+            auto address = current_addr_ + static_cast<std::int32_t>(imm_offset.value()) - 4;
 
             set_register(Register::RA, builder_.getInt32(current_addr_ + INSTRUCTION_SIZE));
             set_register(Register::PC, builder_.getInt32(address));

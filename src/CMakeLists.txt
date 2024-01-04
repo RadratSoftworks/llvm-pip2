@@ -27,6 +27,7 @@ add_library(llvm-pip2 SHARED
         LinkerFix.h
         LinkerFix.cpp
         CInterface.cpp
+        VMConfigParameters.h
 )
 
 target_include_directories(llvm-pip2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

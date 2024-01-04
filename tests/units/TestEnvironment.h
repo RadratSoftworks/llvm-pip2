@@ -24,7 +24,7 @@ namespace Pip2::Test {
 
         ModifiablePoolItems pool_items_;
 
-        std::vector<std::uint32_t> pool_items_built_;
+        std::vector<std::uint64_t> pool_items_built_;
 
         VMOptions vm_options_;
 

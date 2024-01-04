@@ -38,13 +38,13 @@ namespace Pip2::Test {
         return pool_items_.size();
     }
 
-    std::vector<std::uint32_t> ModifiablePoolItems::build()
+    std::vector<std::uint64_t> ModifiablePoolItems::build()
     {
-        std::vector<std::uint32_t> pool_items;
+        std::vector<std::uint64_t> pool_items;
 
         for (const auto &item : pool_items_) {
             if (item.func_ != nullptr) {
-                pool_items.push_back(0x80000000);
+                pool_items.push_back(0x80000000'00000000);
             } else {
                 pool_items.push_back(item.value_);
             }

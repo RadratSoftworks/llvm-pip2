@@ -8,6 +8,9 @@
 
 #include "ObjectCache.h"
 #include "VMContext.h"
+#include "VMConfigParameters.h"
+#include "VMConfig.h"
+#include "VMOptions.h"
 
 namespace Pip2 {
     struct VMConfig;
@@ -30,8 +33,8 @@ namespace Pip2 {
         std::vector<void*> runtime_function_lookup_;
         VMContext context_{};
 
-        const VMConfig &config_;
-        const VMOptions &options_;
+        VMConfig config_;
+        VMOptions options_;
 
         std::string module_name_;
         RuntimeFunction found_runtime_function_{};
@@ -45,7 +48,7 @@ namespace Pip2 {
     public:
         static void default_optimize(llvm::Module &module);
 
-        explicit VMEngine(std::string module_name, const VMConfig &config, const VMOptions &options);
+        explicit VMEngine(std::string module_name, const VMConfigParameters &config, VMOptions &&options);
         virtual ~VMEngine() = default;
 
         virtual void execute(HleHandler handler = nullptr, void *userdata = nullptr);

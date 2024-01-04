@@ -17,7 +17,7 @@ namespace Pip2
         /**
          * @brief The path to the cache directory. Used when cache is enabled.
          */
-        std::string cache_root_path_;
+        const char *cache_root_path_;
 
         /**
          * @brief The base address of the text segment.

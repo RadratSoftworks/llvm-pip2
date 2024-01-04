@@ -9,15 +9,16 @@
 #include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/Analysis/LoopAnalysisManager.h>
 #include <llvm/Passes/PassBuilder.h>
+#include <llvm/Support/FileSystem.h>
 
 #include <utility>
 
 namespace Pip2 {
     bool VMEngine::s_mcjit_initialized_ = false;
 
-    VMEngine::VMEngine(std::string module_name, const VMConfig &config, const VMOptions &options)
+    VMEngine::VMEngine(std::string module_name, const VMConfigParameters &config, VMOptions &&options)
         : module_name_(std::move(module_name))
-        , config_(config)
+        , config_(config.memory_base_, static_cast<std::size_t>(config.memory_size_), config.pool_items_base_, static_cast<std::size_t>(config.pool_item_count_))
         , options_(options)
         , context_()
         , found_runtime_function_(nullptr) {
@@ -25,7 +26,7 @@ namespace Pip2 {
 
         if (options_.cache_)
         {
-            object_cache_ = std::make_unique<ObjectCache>(options_.cache_root_path_);
+            object_cache_ = std::make_unique<ObjectCache>(options_.cache_root_path_ ? options_.cache_root_path_ : "");
         }
 
         initialize_execution_engine();
@@ -128,10 +129,12 @@ namespace Pip2 {
 
     void VMEngine::execute(HleHandler hle_handler, void *userdata) {
         if (!found_runtime_function_) {
-            static constexpr std::size_t TOTAL_LOOKUP_STORAGE = 0x2000;
+            static constexpr std::size_t TOTAL_LOOKUP_STORAGE = 0x40000;
 
             found_runtime_function_ = reinterpret_cast<RuntimeFunction>(execution_engine_->getFunctionAddress("entry_point"));
             runtime_function_lookup_.resize(TOTAL_LOOKUP_STORAGE);
+
+            std::fill(runtime_function_lookup_.begin(), runtime_function_lookup_.end(), reinterpret_cast<std::uint64_t*>(0x123456789ABCDEF));
         }
 
         found_runtime_function_(context_, reinterpret_cast<std::uint32_t*>(config_.memory_base()), runtime_function_lookup_.data(), hle_handler, userdata);

@@ -25,7 +25,7 @@ namespace Pip2::Test {
         std::uint32_t get(std::uint32_t value);
         std::uint32_t get(ModifiablePoolFunction func, void *func_data);
 
-        std::vector<std::uint32_t> build();
+        std::vector<std::uint64_t> build();
 
         void hle_handler(int code);
     };

@@ -27,10 +27,14 @@ namespace Pip2::Test {
              .entry_point_ = 0
         };
 
-        vm_config_ = std::make_unique<VMConfig>(reinterpret_cast<std::uint8_t*>(memory_.data()),
-                                                memory_.size(), &pool_items_built_[0], pool_items_built_.size());
+        VMConfigParameters params = {
+            .memory_base_ = reinterpret_cast<std::uint8_t*>(memory_.data()),
+            .memory_size_ = memory_.size(),
+            .pool_items_base_ = &pool_items_built_[0],
+            .pool_item_count_ = pool_items_built_.size()
+        };
 
-        engine_ = std::make_unique<Pip2::VMEngine>(case_name, *vm_config_, vm_options_);
+        engine_ = std::make_unique<Pip2::VMEngine>(case_name, params, std::move(vm_options_));
     }
 
     void TestEnvironment::reg(Pip2::Register reg, std::uint32_t value)

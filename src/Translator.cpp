@@ -7,7 +7,7 @@
 #include <iostream>
 
 namespace Pip2 {
-    static bool is_branch_cutoff(Instruction instruction)
+    static bool is_branch_cutoff(Instruction instruction, const PoolItems &pool_items, std::uint32_t next_word)
     {
         switch (instruction.word_encoding.opcode)
         {
@@ -43,12 +43,17 @@ namespace Pip2 {
         case Opcode::BGEUIB:
         case Opcode::JPl:
         case Opcode::RET:
+        case Opcode::JPr:
             return true;
 
-        case Opcode::JPr:
-            return (instruction.two_sources_encoding.rd != Register::RA);
+        case Opcode::CALLl: {
+            if (Common::get_immediate_pip_dword(next_word)) {
+                return false;
+            }
 
-        case Opcode::CALLl:
+            return (pool_items.is_pool_item_terminate_function(next_word));
+        }
+
         case Opcode::CALLr:
             return false;
 
@@ -134,13 +139,14 @@ namespace Pip2 {
         }
 
         Instruction previous_inst = { 0 };
+        std::uint32_t previous_next_dword = 0;
 
         current_function_ = function;
 
         for (current_addr_ = function_info.addr_; current_addr_ < function_info.addr_ + function_info.length_; current_addr_ += INSTRUCTION_SIZE) {
             if (blocks_.find(current_addr_) != blocks_.end()) {
                 // If not branching, it's continuous block
-                if (current_addr_ != function_info.addr_ && !is_branch_cutoff(previous_inst))
+                if (current_addr_ != function_info.addr_ && !is_branch_cutoff(previous_inst, config_.pool_items(), previous_next_dword))
                 {
                     builder_.CreateBr(blocks_[current_addr_]);
                 }
@@ -149,6 +155,11 @@ namespace Pip2 {
             }
 
             Instruction instruction { *reinterpret_cast<std::uint32_t*>(config_.memory_base() + current_addr_) };
+
+            if (current_addr_ + INSTRUCTION_SIZE < function_info.addr_ + function_info.length_) {
+                previous_next_dword = *reinterpret_cast<std::uint32_t*>(config_.memory_base() + current_addr_ + INSTRUCTION_SIZE);
+            }
+
             InstructionTranslator translator = instruction_translators_[instruction.word_encoding.opcode];
 
             if (translator == nullptr) {

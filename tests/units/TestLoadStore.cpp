@@ -68,7 +68,7 @@ TEST_CASE("LDHd: Load 16-bit signed to 32-bit register", "[PIP2][LoadStore][Sing
     RandomIntGenerator<std::uint32_t> rand = make_normal_constant_random_generator<std::uint32_t>();
 
     std::vector<Instruction> instructions = {
-            make_unary_instruction(Opcode::LDHd, Register::P0, Register::P0),
+            make_unary_instruction(Opcode::LDHd, Register::P1, Register::P0),
             make_constant(12),
             make_single_argument_instruction(Opcode::JPr, Register::RA)
     };
@@ -83,9 +83,10 @@ TEST_CASE("LDHd: Load 16-bit signed to 32-bit register", "[PIP2][LoadStore][Sing
     heap[8] = randed;
 
     env.reg(Register::P0, env.heap_address() + 4);
+    env.reg(Register::P1, 0xFFFFFFFF);
     env.run();
 
-    REQUIRE(env.reg(Register::P0) == static_cast<std::uint32_t>(randed));
+    REQUIRE(env.reg(Register::P1) == static_cast<std::uint32_t>(randed));
 }
 
 TEST_CASE("LDHUd: Load 16-bit unsigned to 32-bit register", "[PIP2][LoadStore][Single]") {
@@ -93,7 +94,7 @@ TEST_CASE("LDHUd: Load 16-bit unsigned to 32-bit register", "[PIP2][LoadStore][S
     RandomIntGenerator<std::uint32_t> rand = make_normal_constant_random_generator<std::uint32_t>();
 
     std::vector<Instruction> instructions = {
-            make_unary_instruction(Opcode::LDHUd, Register::P0, Register::P0),
+            make_unary_instruction(Opcode::LDHUd, Register::P1, Register::P0),
             make_constant(12),
             make_single_argument_instruction(Opcode::JPr, Register::RA)
     };
@@ -108,9 +109,10 @@ TEST_CASE("LDHUd: Load 16-bit unsigned to 32-bit register", "[PIP2][LoadStore][S
     heap[8] = randed;
 
     env.reg(Register::P0, env.heap_address() + 4);
+    env.reg(Register::P1, 0xFFFFFFFF);
     env.run();
 
-    REQUIRE(env.reg(Register::P0) == static_cast<std::uint32_t>(randed));
+    REQUIRE(env.reg(Register::P1) == static_cast<std::uint32_t>(randed));
 }
 
 TEST_CASE("LDBd: Load 8-bit signed to 32-bit register", "[PIP2][LoadStore][Single]") {

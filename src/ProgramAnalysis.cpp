@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <limits>
 #include <map>
+#include <iostream>
+#include <format>
 
 /**
  * The analysis process makes some assumptions about the compiled assembly, primarily:
@@ -277,11 +279,22 @@ namespace Pip2
             }
             else
             {
-                // No more block to be expected
                 if (unfinished_blocks_left.empty())
                 {
-                    result_function.length_ = addr - result_function.addr_;
-                    break;
+                    if (!suspecting_to_be_labels.empty())
+                    {
+                        // Try to keep going, it may be a loop
+                        current_going_through_block = addr;
+
+                        unfinished_blocks_left.push_back(addr);
+                        result_function.labels_.insert(addr);
+                    }
+                    else
+                    {
+                        // No more block to be expected
+                        result_function.length_ = addr - result_function.addr_;
+                        break;
+                    }
                 }
             }
 
@@ -301,6 +314,12 @@ namespace Pip2
                                                                 is_next_dword_consumed,
                                                                 is_terminate_function);
 
+
+                if (is_next_dword_consumed)
+                {
+                    addr += INSTRUCTION_SIZE;
+                }
+
                 if (is_terminate_function)
                 {
                     // Terminate function ends the function prematurely!
@@ -314,11 +333,6 @@ namespace Pip2
                     if (!jump_target.has_value() && (instruction.word_encoding.opcode != Opcode::CALLl))
                     {
                         throw std::runtime_error("Failed to calculate jump target");
-                    }
-
-                    if (is_next_dword_consumed)
-                    {
-                        addr += INSTRUCTION_SIZE;
                     }
 
                     if (jump_target.has_value())
@@ -479,6 +493,9 @@ namespace Pip2
                         }
                     }
                 }
+                else if (instruction.two_sources_encoding.opcode == Opcode::CALLr) {
+                    block_ending_sign_appear = false;
+                }
 
                 if (block_ending_sign_appear)
                 {
@@ -514,7 +531,30 @@ namespace Pip2
         while (!analyse_queue_.empty())
             analyse_queue_.pop();
 
-        analyse_queue_.push(entry_point_addr);
+        std::set<std::uint32_t> potential_functions_set;
+
+        for (std::size_t i = 1; i <= pool_items_.pool_item_count(); i++) {
+            if (pool_items_.is_pool_item_constant(i)) {
+                std::uint32_t addr = pool_items_.get_pool_item_constant(i);
+
+                if (pool_items_.is_pool_item_function_table_list(i)) {
+                    const auto *table = memory_base_ + (addr >> 2);
+                    while (*table != 0) {
+                        potential_functions_set.insert(*table);
+                        table++;
+                    }
+                }
+                else if (pool_items_.is_pool_item_in_text(i)) {
+                    potential_functions_set.insert(addr);
+                }
+            }
+        }
+
+        potential_functions_set.insert(entry_point_addr + text_base_);
+
+        for (const auto value: potential_functions_set) {
+            analyse_queue_.push(value - text_base_);
+        }
 
         while (!analyse_queue_.empty())
         {
