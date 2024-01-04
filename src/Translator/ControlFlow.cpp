@@ -147,8 +147,6 @@ namespace Pip2 {
 
     void Translator::JPl(Instruction instruction) {
         auto address = current_addr_ + static_cast<std::int32_t>(fetch_immediate());
-        set_register(Register::PC, builder_.getInt32(address));
-
         builder_.CreateBr(blocks_[address]);
     }
 
@@ -242,11 +240,13 @@ namespace Pip2 {
         }
         else
         {
-            // Do manual switch. We don't cut off instructions (preserve at least the value accuracy)
-            auto switch_addr = get_register<std::uint32_t>(instruction.two_sources_encoding.rd);
-            auto switch_value = builder_.CreateLShr(
-                    builder_.CreateSub(switch_addr,builder_.getInt32(jump_table->jump_table_base_addr_)),
-                    builder_.getInt32(2));
+            auto jump_table_translate_state = current_function_jump_table_translate_state_.find(jump_table->switch_value_resolved_addr_);
+            if (jump_table_translate_state == current_function_jump_table_translate_state_.end())
+            {
+                throw std::runtime_error("Jump table not translated");
+            }
+
+            auto switch_value = jump_table_translate_state->second.case_value_;
 
             // Grab a default to satisfy LLVM
             auto default_case = blocks_[jump_table->labels_[0]];

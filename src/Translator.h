@@ -18,6 +18,17 @@ namespace Pip2
     class Translator
     {
     private:
+        struct JumpTableTranslateState {
+            llvm::Value *case_value_;
+
+            std::uint32_t case_value_resolved_addr_;
+            Register case_value_register_;
+
+            explicit JumpTableTranslateState(std::uint32_t case_value_resolved_addr, Register case_value_register)
+                : case_value_(nullptr), case_value_resolved_addr_(case_value_resolved_addr), case_value_register_(case_value_register) {
+            }
+        };
+
         typedef void (Translator::*InstructionTranslator)(Instruction);
 
         const VMConfig &config_;
@@ -49,6 +60,7 @@ namespace Pip2
         // Blocks of the current translating function
         std::map<std::uint32_t, llvm::BasicBlock *> blocks_;
         std::map<std::uint32_t, llvm::Function *> functions_;
+        std::map<std::uint32_t, JumpTableTranslateState> current_function_jump_table_translate_state_;
 
     private:
         void initialize_types();

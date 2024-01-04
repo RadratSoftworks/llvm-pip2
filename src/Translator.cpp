@@ -124,6 +124,7 @@ namespace Pip2 {
 
     void Translator::translate_function(llvm::Function *function, const Function &function_info) {
         blocks_.clear();
+        current_function_jump_table_translate_state_.clear();
 
         current_context_ = function->getArg(0);
         current_memory_base_ = function->getArg(1);
@@ -136,6 +137,11 @@ namespace Pip2 {
 
         for (const auto &label: function_info.labels_) {
             blocks_.emplace(label, llvm::BasicBlock::Create(context_, std::format("label_{:08X}", label), function));
+        }
+
+        for (const auto &jump_table: function_info.jump_tables_) {
+            current_function_jump_table_translate_state_.emplace(jump_table.switch_value_resolved_addr_,
+                                                                 JumpTableTranslateState(jump_table.switch_value_resolved_addr_, jump_table.switch_value_register_));
         }
 
         Instruction previous_inst = { 0 };
@@ -152,6 +158,14 @@ namespace Pip2 {
                 }
 
                 builder_.SetInsertPoint(blocks_[current_addr_]);
+            }
+
+            // Store values for jump table
+            if (!current_function_jump_table_translate_state_.empty()) {
+                auto jump_table_translate_state = current_function_jump_table_translate_state_.find(current_addr_);
+                if (jump_table_translate_state != current_function_jump_table_translate_state_.end()) {
+                    jump_table_translate_state->second.case_value_ = get_register<std::uint32_t>(jump_table_translate_state->second.case_value_register_);
+                }
             }
 
             Instruction instruction { *reinterpret_cast<std::uint32_t*>(config_.memory_base() + current_addr_) };

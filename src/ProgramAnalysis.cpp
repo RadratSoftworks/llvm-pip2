@@ -350,10 +350,7 @@ namespace Pip2
                             // of detect and optimize potential loop
                             if (jump_target.value() < addr)
                             {
-                                if (std::find(result_function.labels_.begin(), result_function.labels_.end(), jump_target.value()) == result_function.labels_.end())
-                                {
-                                    result_function.labels_.insert(jump_target.value());
-                                }
+                                result_function.labels_.insert(jump_target.value());
                             }
                             else
                             {
@@ -395,26 +392,46 @@ namespace Pip2
                 if (instruction.two_sources_encoding.opcode == Opcode::JPr && instruction.two_sources_encoding.rd != Register::RA)
                 {
                     // Confirm if it has a jump table pattern
-                    Instruction potential_offset_calc_instruction{memory_base_[(addr >> 2) - 3]};
-                    Instruction potential_table_base_load_instruction{memory_base_[(addr >> 2) - 2]};
+                    Instruction prev_instruction_1{memory_base_[(addr >> 2) - 4]};
+                    Instruction prev_instruction_2{memory_base_[(addr >> 2) - 3]};
+                    Instruction prev_instruction_3{memory_base_[(addr >> 2) - 2]};
 
-                    if (potential_offset_calc_instruction.word_encoding.opcode == Opcode::SLLi &&
-                        potential_table_base_load_instruction.word_encoding.opcode == Opcode::LDWd &&
-                        potential_offset_calc_instruction.two_sources_encoding.rt == 2)
+                    bool jump_table_pattern_1 = prev_instruction_2.word_encoding.opcode == Opcode::SLLi &&
+                            prev_instruction_3.word_encoding.opcode == Opcode::LDWd &&
+                            prev_instruction_2.two_sources_encoding.rt == 2;
+
+                    bool jump_table_pattern_2 = prev_instruction_1.word_encoding.opcode == Opcode::SLLi &&
+                            prev_instruction_2.word_encoding.opcode == Opcode::ADD &&
+                            prev_instruction_3.word_encoding.opcode == Opcode::LDWd &&
+                            prev_instruction_1.two_sources_encoding.rt == 2;
+
+                    std::uint32_t switch_start_addr;
+                    std::uint8_t index_source_register;
+
+                    JumpTable jump_table;
+                    jump_table.jump_instruction_addr_ = addr;
+
+                    if (jump_table_pattern_1)
                     {
-                        JumpTable jump_table;
-                        jump_table.jump_instruction_addr_ = addr;
+                        index_source_register = prev_instruction_2.two_sources_encoding.rs;
+                        switch_start_addr = addr - INSTRUCTION_SIZE * 3;
+                    } else {
+                        index_source_register = prev_instruction_1.two_sources_encoding.rs;
+                        switch_start_addr = addr - INSTRUCTION_SIZE * 4;
+                    }
 
-                        std::uint8_t indexing_register = potential_offset_calc_instruction.two_sources_encoding.rd;
-                        std::uint8_t index_source_register = potential_offset_calc_instruction.two_sources_encoding.rs;
-                        std::uint32_t switch_start_addr = addr - INSTRUCTION_SIZE * 3;
+                    if (jump_table_pattern_1 || jump_table_pattern_2) {
+                        jump_table.switch_value_resolved_addr_ = switch_start_addr;
+                        jump_table.switch_value_register_ = static_cast<Register>(index_source_register);
 
                         // There may be an AND instruction before SLL too, to cast down the integer, allow it
-                        Instruction potential_and_instruction{memory_base_[(addr >> 2) - 4]};
-                        if (potential_and_instruction.two_sources_encoding.opcode == Opcode::ANDi &&
-                            potential_and_instruction.two_sources_encoding.rd == indexing_register)
+                        Instruction potential_and_instruction{memory_base_[(switch_start_addr >> 2) - 2]};
+                        if ((potential_and_instruction.two_sources_encoding.opcode == Opcode::ANDi) &&
+                            (potential_and_instruction.two_sources_encoding.rd == index_source_register) &&
+                            (memory_base_[(switch_start_addr >> 2) - 1] == 0x800000FF))
                         {
-                            switch_start_addr -= INSTRUCTION_SIZE;
+                            switch_start_addr -= INSTRUCTION_SIZE + 4;
+                            index_source_register = potential_and_instruction.two_sources_encoding.rs;
                         }
 
                         std::size_t total_cases = std::numeric_limits<std::size_t>::max();
@@ -441,24 +458,24 @@ namespace Pip2
                             {
                                 Instruction tracing_instruction{memory_base_[(switch_start_addr >> 2) - (i + 1)]};
 
-                                if ((possible_branch_instruction.two_sources_encoding.opcode == Opcode::BLEI) ||
-                                    (possible_branch_instruction.two_sources_encoding.opcode == Opcode::BLEIB) ||
-                                    (possible_branch_instruction.two_sources_encoding.opcode == Opcode::BLEUI) ||
-                                    (possible_branch_instruction.two_sources_encoding.opcode == Opcode::BLEUIB))
+                                if ((tracing_instruction.two_sources_encoding.opcode == Opcode::BLEI) ||
+                                    (tracing_instruction.two_sources_encoding.opcode == Opcode::BLEIB) ||
+                                    (tracing_instruction.two_sources_encoding.opcode == Opcode::BLEUI) ||
+                                    (tracing_instruction.two_sources_encoding.opcode == Opcode::BLEUIB))
                                 {
-                                    if (possible_branch_instruction.two_sources_encoding.rd == indexing_register)
+                                    if (tracing_instruction.two_sources_encoding.rd == index_source_register)
                                     {
                                         bool temp_word_consumed = false;
                                         bool temp_is_terminate = false;
 
                                         // Check jump target
                                         std::optional<std::uint32_t> branch_jump_target = calculate_direct_jump_target(
-                                            pool_items_,
-                                            tracing_instruction,
-                                            switch_start_addr - INSTRUCTION_SIZE * (i + 1),
-                                            memory_base_[(switch_start_addr >> 2) - (i + 1) + 1],
-                                            temp_word_consumed,
-                                            temp_is_terminate);
+                                                pool_items_,
+                                                tracing_instruction,
+                                                switch_start_addr - INSTRUCTION_SIZE * (i + 1),
+                                                memory_base_[(switch_start_addr >> 2) - (i + 1) + 1],
+                                                temp_word_consumed,
+                                                temp_is_terminate);
 
                                         if (branch_jump_target.has_value() &&
                                             (branch_jump_target.value() == switch_start_addr))
@@ -475,8 +492,46 @@ namespace Pip2
                         {
                             jump_table.labels_.resize(total_cases);
 
-                            std::uint32_t table_pool_index = memory_base_[(addr >> 2) - 1];
-                            std::uint32_t table_pool_addr = pool_items_.get_pool_item_constant(table_pool_index);
+                            std::uint32_t table_pool_addr;
+
+                            if (jump_table_pattern_1) {
+                                std::uint32_t table_pool_index = memory_base_[(addr >> 2) - 1];
+                                table_pool_addr = pool_items_.get_pool_item_constant(table_pool_index);
+                            } else {
+                                // Trace back assignment
+                                std::uint32_t tracing_addr_back = switch_start_addr - INSTRUCTION_SIZE;
+
+                                Register base_register = prev_instruction_2.two_sources_encoding.rs == index_source_register ?
+                                        prev_instruction_2.two_sources_encoding.rt:
+                                        prev_instruction_2.two_sources_encoding.rs;
+
+                                while (tracing_addr_back >= result_function.addr_) {
+                                    Instruction tracing_base_assign_inst{memory_base_[(tracing_addr_back >> 2)]};
+
+                                    if (tracing_base_assign_inst.two_sources_encoding.opcode == Opcode::LDI &&
+                                        tracing_base_assign_inst.two_sources_encoding.rd == base_register) {
+                                        std::uint32_t table_pool_index = memory_base_[(tracing_addr_back >> 2) + 1];
+                                        table_pool_addr = pool_items_.get_pool_item_constant(table_pool_index);
+
+                                        std::uint32_t add_constant = memory_base_[(jump_table.jump_instruction_addr_ >> 2) - 1];
+                                        if (auto add_offset = Common::get_immediate_pip_dword(add_constant)) {
+                                            table_pool_addr += add_offset.value();
+                                            break;
+                                        }
+                                        else {
+                                            if (!pool_items_.is_pool_item_constant(add_constant)) {
+                                                throw std::runtime_error("Failed to resolve jump table base address");
+                                            }
+                                            else {
+                                                table_pool_addr += pool_items_.get_pool_item_constant(add_constant);
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    tracing_addr_back -= 4;
+                                }
+                            }
 
                             jump_table.jump_table_base_addr_ = table_pool_addr;
 
@@ -484,7 +539,12 @@ namespace Pip2
                             {
                                 std::uint32_t case_addr = memory_base_[(table_pool_addr >> 2) + i];
                                 jump_table.labels_[i] = case_addr;
-                                suspecting_to_be_labels.insert(case_addr);
+
+                                if (case_addr >= addr) {
+                                    suspecting_to_be_labels.insert(case_addr);
+                                } else {
+                                    result_function.labels_.insert(case_addr);
+                                }
                             }
 
                             // Can detect jump table and probably inline all the case blocks
@@ -553,6 +613,7 @@ namespace Pip2
         potential_functions_set.insert(entry_point_addr + text_base_);
 
         for (const auto value: potential_functions_set) {
+            found_functions_.insert(value - text_base_);
             analyse_queue_.push(value - text_base_);
         }
 

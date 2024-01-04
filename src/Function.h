@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Register.h"
+
 #include <cstdint>
 #include <vector>
 #include <set>
@@ -9,6 +11,8 @@ namespace Pip2 {
     {
         std::uint32_t jump_instruction_addr_;
         std::uint32_t jump_table_base_addr_;
+        std::uint32_t switch_value_resolved_addr_;
+        Register switch_value_register_;
         std::vector<std::size_t> labels_;
     };
 
