@@ -22,6 +22,7 @@ namespace Pip2
       bool is_pool_item_terminate_function(const std::size_t number) const;
       bool is_pool_item_in_text(const std::size_t number) const;
       bool is_pool_item_function_table_list(const std::size_t number) const;
+      bool is_pool_item_function_in_table(const std::size_t number) const;
       std::uint32_t get_pool_item_constant(const std::size_t number) const;
    };
 }

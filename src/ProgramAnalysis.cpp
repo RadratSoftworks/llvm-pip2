@@ -480,7 +480,7 @@ namespace Pip2
                                         if (branch_jump_target.has_value() &&
                                             (branch_jump_target.value() == switch_start_addr))
                                         {
-                                            total_cases = tracing_instruction.two_sources_encoding.rs;
+                                            total_cases = tracing_instruction.two_sources_encoding.rs + 1;
                                             break;
                                         }
                                     }
@@ -545,6 +545,8 @@ namespace Pip2
                                 } else {
                                     result_function.labels_.insert(case_addr);
                                 }
+
+                                found_table_labels_.insert(case_addr);
                             }
 
                             // Can detect jump table and probably inline all the case blocks
@@ -587,11 +589,13 @@ namespace Pip2
     {
         std::vector<Function> results;
         found_functions_.clear();
+        found_table_labels_.clear();
 
         while (!analyse_queue_.empty())
             analyse_queue_.pop();
 
         std::set<std::uint32_t> potential_functions_set;
+        std::set<std::uint32_t> potential_functions_set_deferred;
 
         for (std::size_t i = 1; i <= pool_items_.pool_item_count(); i++) {
             if (pool_items_.is_pool_item_constant(i)) {
@@ -607,6 +611,9 @@ namespace Pip2
                 else if (pool_items_.is_pool_item_in_text(i)) {
                     potential_functions_set.insert(addr);
                 }
+                else if (pool_items_.is_pool_item_function_in_table(i)) {
+                    potential_functions_set_deferred.insert(addr);
+                }
             }
         }
 
@@ -617,21 +624,38 @@ namespace Pip2
             analyse_queue_.push(value - text_base_);
         }
 
-        while (!analyse_queue_.empty())
-        {
-            auto addr = text_base_ + analyse_queue_.front();
-            analyse_queue_.pop();
-
-            if (addr < text_base_ || addr >= text_base_ + text_size_)
+        auto analyse_routine = [&]() {
+            while (!analyse_queue_.empty())
             {
+                auto addr = text_base_ + analyse_queue_.front();
+                analyse_queue_.pop();
+
+                if (addr < text_base_ || addr >= text_base_ + text_size_)
+                {
+                    continue;
+                }
+
+                Function sweeped = sweep_function(addr);
+                sweeped.is_entry_point_ = (addr == entry_point_addr + text_base_);
+
+                results.push_back(sweeped);
+            }
+        };
+
+        analyse_routine();
+
+        // Analyse the deferred function
+        for (const auto value: potential_functions_set_deferred) {
+            if (found_functions_.contains(value - text_base_) || found_table_labels_.contains(value)) {
                 continue;
             }
-
-            Function sweeped = sweep_function(addr);
-            sweeped.is_entry_point_ = (addr == entry_point_addr + text_base_);
-
-            results.push_back(sweeped);
+            else {
+                found_functions_.insert(value - text_base_);
+                analyse_queue_.push(value - text_base_);
+            }
         }
+
+        analyse_routine();
 
         return results;
     }

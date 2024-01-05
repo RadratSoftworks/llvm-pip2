@@ -205,6 +205,8 @@ namespace Pip2
         void SYSCPY(Instruction instruction);
         void SYSSET(Instruction instruction);
 
+        void SLEEP(Instruction instruction);
+
     private:
         InstructionTranslator instruction_translators_[Opcode::TotalOpcodes] = {
             &Translator::NOP, &Translator::NOP, &Translator::ADD, &Translator::AND, &Translator::MUL,                                                 // 0x00
@@ -221,7 +223,7 @@ namespace Pip2
             &Translator::BNEIB, &Translator::BGEIB, &Translator::BGEUIB, &Translator::BGTIB, &Translator::BGTUIB, // 0x37
             &Translator::BLEIB, &Translator::BLEUIB, &Translator::BLTIB, &Translator::BLTUIB, &Translator::LDQ,            // 0x3C
             &Translator::JPr, &Translator::CALLr, &Translator::STORE, &Translator::RESTORE, &Translator::RET,                                                          // 0x41
-            nullptr, nullptr, &Translator::SYSCPY, &Translator::SYSSET, &Translator::ADDi,                                                // 0x46
+            nullptr, &Translator::SLEEP, &Translator::SYSCPY, &Translator::SYSSET, &Translator::ADDi,                                                // 0x46
             &Translator::ANDi, &Translator::MULi, &Translator::DIVi, &Translator::DIVUi, &Translator::ORi,                                                          // 0x4B
             &Translator::XORi, &Translator::SUBi, &Translator::STBd, &Translator::STHd, &Translator::STWd,                                                // 0x50
             &Translator::LDBd, &Translator::LDHd, &Translator::LDWd, &Translator::LDBUd, &Translator::LDHUd,                                                          // 0x55

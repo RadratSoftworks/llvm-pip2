@@ -20,6 +20,7 @@ namespace Pip2
 
         std::queue<std::uint32_t> analyse_queue_;
         std::set<std::uint32_t> found_functions_;
+        std::set<std::uint32_t> found_table_labels_;
 
         const PoolItems &pool_items_;
 
