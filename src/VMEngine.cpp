@@ -134,7 +134,9 @@ namespace Pip2 {
             found_runtime_function_ = reinterpret_cast<RuntimeFunction>(execution_engine_->getFunctionAddress("entry_point"));
             runtime_function_lookup_.resize(TOTAL_LOOKUP_STORAGE);
 
-            std::fill(runtime_function_lookup_.begin(), runtime_function_lookup_.end(), reinterpret_cast<std::uint64_t*>(0x123456789ABCDEF));
+            auto unimplemented_func_handler = execution_engine_->getFunctionAddress("sub_unimplemented");
+
+            std::fill(runtime_function_lookup_.begin(), runtime_function_lookup_.end(), reinterpret_cast<void*>(&unimplemented_func_handler));
         }
 
         found_runtime_function_(context_, reinterpret_cast<std::uint32_t*>(config_.memory_base()), runtime_function_lookup_.data(), hle_handler, userdata);

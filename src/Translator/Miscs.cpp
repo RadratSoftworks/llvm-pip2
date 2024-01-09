@@ -30,4 +30,9 @@ namespace Pip2
     {
         // Do nothing
     }
+
+    void Translator::SLEEP(Instruction instruction)
+    {
+        // For now do nothing
+    }
 }

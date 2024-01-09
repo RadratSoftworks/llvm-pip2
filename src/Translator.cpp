@@ -214,6 +214,24 @@ namespace Pip2 {
         }
     }
 
+    void Translator::generate_hle_handler_trampoline(llvm::Module *module) {
+        auto unimplemented_func = llvm::Function::Create(function_type_, llvm::GlobalValue::ExternalLinkage,
+                                                       "sub_unimplemented", module);
+
+        auto unimplemented_block = llvm::BasicBlock::Create(context_, "1", unimplemented_func);
+        builder_.SetInsertPoint(unimplemented_block);
+
+        auto hle_callee = llvm::FunctionCallee(hle_handler_function_type_,
+                                               builder_.CreateIntToPtr(unimplemented_func->getArg(3), hle_handler_function_type_->getPointerTo()));
+
+        builder_.CreateCall(hle_callee, {
+            unimplemented_func->getArg(4),
+            builder_.getInt32(Common::exception_to_hle_code(Common::ExceptionCode::NotCompiledFunction))
+        });
+
+        builder_.CreateRetVoid();
+    }
+
     void Translator::generate_entry_point_function(const std::uint32_t entry_point_addr) {
         auto entry_point_sub = functions_[entry_point_addr];
         auto entry_point_func = llvm::Function::Create(function_type_, llvm::GlobalValue::ExternalLinkage,
@@ -259,6 +277,8 @@ namespace Pip2 {
             generate_entry_point_function(function.addr_);
             break;
         }
+
+        generate_hle_handler_trampoline(module.get());
 
         return module;
     }
