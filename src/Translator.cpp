@@ -90,35 +90,63 @@ namespace Pip2 {
 
     template <>
     llvm::Value *Translator::get_register<std::uint32_t>(Register src) {
+        if (src == Register::ZR) {
+            return builder_.getInt32(0);
+        }
+
         return builder_.CreateLoad(i32_type_, get_register_pointer(src));
     }
 
     template <>
     llvm::Value *Translator::get_register<std::int32_t>(Register src) {
+        if (src == Register::ZR) {
+            return builder_.getInt32(0);
+        }
+
         return builder_.CreateLoad(i32_type_, get_register_pointer(src));
     }
 
     template <>
     llvm::Value *Translator::get_register<std::uint16_t>(Register src) {
+        if (src == Register::ZR) {
+            return builder_.getInt16(0);
+        }
+
         return builder_.CreateLoad(i16_type_, get_register_pointer(src));
     }
 
     template <>
     llvm::Value *Translator::get_register<std::int16_t>(Register src) {
+        if (src == Register::ZR) {
+            return builder_.getInt16(0);
+        }
+
         return builder_.CreateLoad(i16_type_, get_register_pointer(src));
     }
 
     template <>
     llvm::Value *Translator::get_register<std::uint8_t>(Register src) {
+        if (src == Register::ZR) {
+            return builder_.getInt8(0);
+        }
+
         return builder_.CreateLoad(i8_type_, get_register_pointer(src));
     }
 
     template <>
     llvm::Value *Translator::get_register<std::int8_t>(Register src) {
+        if (src == Register::ZR) {
+            return builder_.getInt8(0);
+        }
+
         return builder_.CreateLoad(i8_type_, get_register_pointer(src));
     }
 
     void Translator::set_register(Pip2::Register dest, llvm::Value *value) {
+        if (dest == Register::ZR) {
+            throw std::runtime_error("Can't set to ZR register!");
+        }
+
         builder_.CreateStore(value, get_register_pointer(dest));
     }
 

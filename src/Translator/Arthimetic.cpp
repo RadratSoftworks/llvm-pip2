@@ -327,7 +327,7 @@ namespace Pip2
     void Translator::SLLi(Instruction instruction)
     {
         auto lhs = get_register<std::uint32_t>(instruction.two_sources_encoding.rs);
-        auto rhs = instruction.two_sources_encoding.rt;
+        auto rhs = instruction.two_sources_encoding.rt & 0x1F;
 
         set_register(instruction.two_sources_encoding.rd, builder_.CreateShl(lhs, builder_.getInt32( rhs)));
     }
@@ -359,7 +359,7 @@ namespace Pip2
     void Translator::SRLi(Instruction instruction)
     {
         auto lhs = get_register<std::uint32_t>(instruction.two_sources_encoding.rs);
-        auto rhs = instruction.two_sources_encoding.rt;
+        auto rhs = instruction.two_sources_encoding.rt & 0x1F;
 
         set_register(instruction.two_sources_encoding.rd, builder_.CreateLShr(lhs, builder_.getInt32( rhs)));
     }
@@ -391,7 +391,7 @@ namespace Pip2
     void Translator::SRAi(Instruction instruction)
     {
         auto lhs = get_register<std::int32_t>(instruction.two_sources_encoding.rs);
-        auto rhs = instruction.two_sources_encoding.rt;
+        auto rhs = instruction.two_sources_encoding.rt & 0x1F;
 
         set_register(instruction.two_sources_encoding.rd, builder_.CreateAShr(lhs, builder_.getInt32( rhs)));
     }
