@@ -7,6 +7,15 @@
 
 namespace Pip2::Common
 {
+    enum ExceptionCode {
+        NotCompiledFunction = 1,
+        AccessViolation
+    };
+
+    inline int exception_to_hle_code(ExceptionCode code) {
+        return -static_cast<int>(code);
+    }
+
     inline std::optional<std::uint32_t> get_immediate_pip_dword(const std::uint32_t dword)
     {
         if ((dword & 0x80000000U) != 0)

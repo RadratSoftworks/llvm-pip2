@@ -67,6 +67,7 @@ namespace Pip2
 
         void translate_function(llvm::Function *function, const Function &function_info);
         void generate_entry_point_function(std::uint32_t entry_point_addr);
+        void generate_hle_handler_trampoline(llvm::Module *module);
 
         llvm::Value *get_register_pointer(Register reg);
         llvm::Value *get_memory_pointer(llvm::Value *address);
