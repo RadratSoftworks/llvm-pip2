@@ -279,8 +279,10 @@ namespace Pip2 {
 
         // Generate entry point function, which also setup the lookup table
         for (const Function &function: functions) {
-            generate_entry_point_function(function.addr_);
-            break;
+            if (function.is_entry_point_) {
+                generate_entry_point_function(function.addr_);
+                break;
+            }
         }
 
         generate_hle_handler_trampoline(module.get());

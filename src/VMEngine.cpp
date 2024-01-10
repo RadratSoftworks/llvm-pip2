@@ -129,7 +129,7 @@ namespace Pip2 {
 
     void VMEngine::execute(HleHandler hle_handler, void *userdata) {
         if (!found_runtime_function_) {
-            static constexpr std::size_t TOTAL_LOOKUP_STORAGE = 0x40000;
+            static constexpr std::size_t TOTAL_LOOKUP_STORAGE = 0x100000;
 
             found_runtime_function_ = reinterpret_cast<RuntimeFunction>(execution_engine_->getFunctionAddress("entry_point"));
             runtime_function_lookup_.resize(TOTAL_LOOKUP_STORAGE);
