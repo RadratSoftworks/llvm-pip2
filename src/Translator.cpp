@@ -163,9 +163,14 @@ namespace Pip2 {
         current_hle_handler_userdata_ = function->getArg(4);
         current_function_analysis_ = &function_info;
 
+        auto entry_block = llvm::BasicBlock::Create(context_, "entry", function);
+
         for (const auto &label: function_info.labels_) {
             blocks_.emplace(label, llvm::BasicBlock::Create(context_, std::format("label_{:08X}", label), function));
         }
+
+        builder_.SetInsertPoint(entry_block);
+        builder_.CreateBr(blocks_[function_info.addr_]);
 
         for (const auto &jump_table: function_info.jump_tables_) {
             current_function_jump_table_translate_state_.emplace(jump_table.switch_value_resolved_addr_,
