@@ -11,6 +11,7 @@ namespace Pip2 {
         std::filesystem::path cache_root_path_;
 
         std::filesystem::path get_cache_path(const std::string &module_name);
+        std::filesystem::path get_cache_meta_path(const std::string &module_name);
 
     public:
         explicit ObjectCache(const std::string &cache_root_path_);

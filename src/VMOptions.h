@@ -14,6 +14,8 @@ namespace Pip2
          */
         bool cache_;
 
+        std::uint8_t padding_[6];
+
         /**
          * @brief The path to the cache directory. Used when cache is enabled.
          */

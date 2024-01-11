@@ -9,9 +9,9 @@
 #include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/Analysis/LoopAnalysisManager.h>
 #include <llvm/Passes/PassBuilder.h>
-#include <llvm/Support/FileSystem.h>
 
 #include <utility>
+#include <fstream>
 
 namespace Pip2 {
     bool VMEngine::s_mcjit_initialized_ = false;

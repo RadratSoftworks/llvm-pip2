@@ -1,10 +1,16 @@
 #include "ObjectCache.h"
+#include "Constants.h"
+
+#include <fstream>
 #include <filesystem>
 
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/FileSystem.h>
 
 #include <llvm/IR/Module.h>
+#include <nlohmann/json.hpp>
+
+using namespace nlohmann;
 
 namespace Pip2 {
     ObjectCache::ObjectCache(const std::string &cache_root_path)
@@ -16,7 +22,27 @@ namespace Pip2 {
         return cache_root_path_ / std::filesystem::path(module_name).replace_extension(".obj");
     }
 
+    std::filesystem::path ObjectCache::get_cache_meta_path(const std::string &module_name)
+    {
+        return cache_root_path_ / std::filesystem::path(module_name).replace_extension(".obj.meta");
+    }
+
     std::unique_ptr<llvm::MemoryBuffer> ObjectCache::load(const std::string &module_name) {
+        auto cache_meta_path = get_cache_meta_path(module_name);
+        if (!std::filesystem::exists(cache_meta_path)) {
+            return nullptr;
+        }
+
+        std::ifstream meta_file_stream(cache_meta_path.string());
+        try {
+            json meta_file = json::parse(meta_file_stream);
+            if (meta_file["version"] != Pip2::CACHE_VERSION) {
+                // Force recompile
+                return nullptr;
+            }
+        } catch (std::exception &ex) {
+        }
+
         auto cache_path = get_cache_path(module_name);
         if (!std::filesystem::exists(cache_path)) {
             return nullptr;
@@ -39,6 +65,14 @@ namespace Pip2 {
         std::error_code ec;
         llvm::raw_fd_ostream os(cache_path, ec, llvm::sys::fs::OF_None);
         os.write(Obj.getBufferStart(), Obj.getBufferSize());
+
+        {
+            std::string cache_meta_path = get_cache_meta_path(M->getName().str()).string();
+            std::ofstream meta_file_stream(cache_meta_path);
+            json meta_file;
+            meta_file["version"] = Pip2::CACHE_VERSION;
+            meta_file_stream << meta_file.dump(4);
+        }
     }
 
     std::unique_ptr<llvm::MemoryBuffer> ObjectCache::getObject(const llvm::Module *M) {

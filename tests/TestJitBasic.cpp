@@ -59,9 +59,9 @@ int main(int argc, char **argv) {
     auto *memory_base = reinterpret_cast<std::uint32_t*>(instructions);
     std::size_t memory_size = sizeof(instructions);
 
-    std::uint32_t pool_base = 0;
+    std::uint64_t pool_base = 0;
 
-    VMConfig vm_config(reinterpret_cast<std::uint8_t*>(memory_base), memory_size, &pool_base, 0);
+    VMConfigParameters vm_config(reinterpret_cast<std::uint8_t*>(memory_base), memory_size, &pool_base, 0);
     VMOptions vm_options {
         .divide_by_zero_result_zero = true,
         .cache_ = false,
@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
         .entry_point_ = 0
     };
 
-    VMEngine vm_engine("TestJitBasic", vm_config, vm_options);
+    VMEngine vm_engine("TestJitBasic", vm_config, std::move(vm_options));
     vm_engine.context().regs_[Register::P1 >> 2] = 10;
     vm_engine.context().regs_[Register::P2 >> 2] = 5;
     vm_engine.execute();
