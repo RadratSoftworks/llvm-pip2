@@ -14,7 +14,6 @@
 #define LLVM_TEXTAPI_PACKEDVERSION_H
 
 #include <cstdint>
-#include <string>
 #include <utility>
 
 namespace llvm {
@@ -53,8 +52,6 @@ public:
   bool operator!=(const PackedVersion &O) const { return Version != O.Version; }
 
   uint32_t rawValue() const { return Version; }
-
-  operator std::string() const;
 
   void print(raw_ostream &OS) const;
 };

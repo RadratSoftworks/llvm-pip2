@@ -21,7 +21,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
-#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -40,7 +39,7 @@ class Use;
 
 /// A private "module" namespace for types and utilities used by SROA. These
 /// are implementation details and should not be used by clients.
-namespace LLVM_LIBRARY_VISIBILITY sroa {
+namespace sroa LLVM_LIBRARY_VISIBILITY {
 
 class AllocaSliceRewriter;
 class AllocaSlices;
@@ -106,7 +105,7 @@ class SROAPass : public PassInfoMixin<SROAPass> {
   /// directly promoted. Finally, each time we rewrite a use of an alloca other
   /// the one being actively rewritten, we add it back onto the list if not
   /// already present to ensure it is re-visited.
-  SmallSetVector<AllocaInst *, 16> Worklist;
+  SetVector<AllocaInst *, SmallVector<AllocaInst *, 16>> Worklist;
 
   /// A collection of instructions to delete.
   /// We try to batch deletions to simplify code and make things a bit more
@@ -121,7 +120,7 @@ class SROAPass : public PassInfoMixin<SROAPass> {
   ///
   /// Note that we have to be very careful to clear allocas out of this list in
   /// the event they are deleted.
-  SmallSetVector<AllocaInst *, 16> PostPromotionWorklist;
+  SetVector<AllocaInst *, SmallVector<AllocaInst *, 16>> PostPromotionWorklist;
 
   /// A collection of alloca instructions we can directly promote.
   std::vector<AllocaInst *> PromotableAllocas;
@@ -131,7 +130,7 @@ class SROAPass : public PassInfoMixin<SROAPass> {
   /// All of these PHIs have been checked for the safety of speculation and by
   /// being speculated will allow promoting allocas currently in the promotable
   /// queue.
-  SmallSetVector<PHINode *, 8> SpeculatablePHIs;
+  SetVector<PHINode *, SmallVector<PHINode *, 8>> SpeculatablePHIs;
 
   /// A worklist of select instructions to rewrite prior to promoting
   /// allocas.

@@ -74,7 +74,7 @@ private:
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
   /// The index of this section in the layout order.
-  unsigned LayoutOrder = 0;
+  unsigned LayoutOrder;
 
   /// Keeping track of bundle-locked state.
   BundleLockStateType BundleLockState = NotBundleLocked;

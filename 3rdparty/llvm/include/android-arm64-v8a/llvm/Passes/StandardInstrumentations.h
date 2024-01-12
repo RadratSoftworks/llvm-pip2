@@ -52,8 +52,6 @@ private:
 
   bool shouldPrintBeforePass(StringRef PassID);
   bool shouldPrintAfterPass(StringRef PassID);
-  bool shouldPrintPassNumbers();
-  bool shouldPrintAtPassNumber();
 
   using PrintModuleDesc = std::tuple<const Module *, std::string, StringRef>;
 
@@ -64,9 +62,6 @@ private:
   /// Stack of Module description, enough to print the module after a given
   /// pass.
   SmallVector<PrintModuleDesc, 2> ModuleDescStack;
-
-  /// Used for print-at-pass-number
-  unsigned CurrentPassNumber = 0;
 };
 
 class OptNoneInstrumentation {
@@ -157,8 +152,9 @@ public:
   SmallVector<StringRef, 8> PassStack;
 #endif
 
+  static cl::opt<bool> VerifyPreservedCFG;
   void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         ModuleAnalysisManager &MAM);
+                         FunctionAnalysisManager &FAM);
 };
 
 // Base class for classes that report changes to the IR.
@@ -579,7 +575,7 @@ public:
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.
   void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         ModuleAnalysisManager *MAM = nullptr);
+                         FunctionAnalysisManager *FAM = nullptr);
 
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };

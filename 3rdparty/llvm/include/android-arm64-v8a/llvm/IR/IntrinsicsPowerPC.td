@@ -31,12 +31,12 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
 
   // Get content from current FPSCR register
   def int_ppc_readflm : ClangBuiltin<"__builtin_readflm">,
-                        DefaultAttrsIntrinsic<[llvm_double_ty], [],
-                                              [IntrNoMerge, IntrHasSideEffects]>;
+                        Intrinsic<[llvm_double_ty], [],
+                                  [IntrNoMerge, IntrHasSideEffects]>;
   // Set FPSCR register, and return previous content
   def int_ppc_setflm : ClangBuiltin<"__builtin_setflm">,
-                       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty],
-                                             [IntrHasSideEffects]>;
+                       Intrinsic<[llvm_double_ty], [llvm_double_ty],
+                                 [IntrHasSideEffects]>;
 
   // Intrinsics for [double]word extended forms of divide instructions
   def int_ppc_divwe : ClangBuiltin<"__builtin_divwe">,
@@ -61,14 +61,14 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
 
   // Generate a random number
   def int_ppc_darn : ClangBuiltin<"__builtin_darn">,
-                     DefaultAttrsIntrinsic<[llvm_i64_ty], [],
-                                           [IntrNoMerge, IntrHasSideEffects]>;
+                     Intrinsic<[llvm_i64_ty], [],
+                               [IntrNoMerge, IntrHasSideEffects]>;
   def int_ppc_darnraw : ClangBuiltin<"__builtin_darn_raw">,
-                     DefaultAttrsIntrinsic<[llvm_i64_ty], [],
-                                           [IntrNoMerge, IntrHasSideEffects]>;
+                     Intrinsic<[llvm_i64_ty], [],
+                               [IntrNoMerge, IntrHasSideEffects]>;
   def int_ppc_darn32 : ClangBuiltin<"__builtin_darn_32">,
-                     DefaultAttrsIntrinsic<[llvm_i32_ty], [],
-                                           [IntrNoMerge, IntrHasSideEffects]>;
+                     Intrinsic<[llvm_i32_ty], [],
+                               [IntrNoMerge, IntrHasSideEffects]>;
 
   // Bit permute doubleword
   def int_ppc_bpermd : ClangBuiltin<"__builtin_bpermd">,
@@ -389,20 +389,20 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   // Stores.  These don't map directly to GCC builtins because they represent the
   // source address with a single pointer.
   def int_ppc_altivec_stvx :
-              DefaultAttrsIntrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
-                                    [IntrWriteMem, IntrArgMemOnly]>;
+              Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
+                        [IntrWriteMem, IntrArgMemOnly]>;
   def int_ppc_altivec_stvxl :
-              DefaultAttrsIntrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
-                                    [IntrWriteMem, IntrArgMemOnly]>;
+              Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
+                        [IntrWriteMem, IntrArgMemOnly]>;
   def int_ppc_altivec_stvebx :
-              DefaultAttrsIntrinsic<[], [llvm_v16i8_ty, llvm_ptr_ty],
-                                    [IntrWriteMem, IntrArgMemOnly]>;
+              Intrinsic<[], [llvm_v16i8_ty, llvm_ptr_ty],
+                        [IntrWriteMem, IntrArgMemOnly]>;
   def int_ppc_altivec_stvehx :
-              DefaultAttrsIntrinsic<[], [llvm_v8i16_ty, llvm_ptr_ty],
-                                    [IntrWriteMem, IntrArgMemOnly]>;
+              Intrinsic<[], [llvm_v8i16_ty, llvm_ptr_ty],
+                        [IntrWriteMem, IntrArgMemOnly]>;
   def int_ppc_altivec_stvewx :
-              DefaultAttrsIntrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
-                                    [IntrWriteMem, IntrArgMemOnly]>;
+              Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
+                        [IntrWriteMem, IntrArgMemOnly]>;
 
   // Comparisons setting a vector.
   def int_ppc_altivec_vcmpbfp : ClangBuiltin<"__builtin_altivec_vcmpbfp">,
@@ -1572,7 +1572,7 @@ def int_ppc_cfence : Intrinsic<[], [llvm_any_ty], []>;
 
 // PowerPC set FPSCR Intrinsic Definitions.
 def int_ppc_setrnd : ClangBuiltin<"__builtin_setrnd">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i32_ty], [IntrHasSideEffects]>;
+      Intrinsic<[llvm_double_ty], [llvm_i32_ty], []>;
 }
 
 let TargetPrefix = "ppc" in {
@@ -1728,14 +1728,14 @@ let TargetPrefix = "ppc" in {
   def int_ppc_mfmsr : ClangBuiltin<"__builtin_ppc_mfmsr">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
   def int_ppc_mfspr
-      : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
+      : Intrinsic<[llvm_anyint_ty], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
   def int_ppc_mtmsr
       : ClangBuiltin<"__builtin_ppc_mtmsr">, Intrinsic<[], [llvm_i32_ty], []>;
   def int_ppc_mtspr
-      : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyint_ty], [ImmArg<ArgIndex<0>>]>;
+      : Intrinsic<[], [llvm_i32_ty, llvm_anyint_ty], [ImmArg<ArgIndex<0>>]>;
   def int_ppc_stfiw : ClangBuiltin<"__builtin_ppc_stfiw">,
-                      DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_double_ty],
-                                            [IntrWriteMem]>;
+                      Intrinsic<[], [llvm_ptr_ty, llvm_double_ty],
+                                [IntrWriteMem]>;
   // compare
   def int_ppc_cmpeqb
       : ClangBuiltin<"__builtin_ppc_cmpeqb">,
@@ -1865,8 +1865,8 @@ let TargetPrefix = "ppc" in {
         DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
   def int_ppc_addex
       : ClangBuiltin<"__builtin_ppc_addex">,
-        DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty],
-                              [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<2>>]>;
+        Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty],
+                  [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<2>>]>;
   def int_ppc_fsel : ClangBuiltin<"__builtin_ppc_fsel">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty, 
                              llvm_double_ty], [IntrNoMem]>;
@@ -1893,9 +1893,9 @@ let TargetPrefix = "ppc" in {
       DefaultAttrsIntrinsic<[llvm_i32_ty], 
                             [llvm_double_ty, llvm_double_ty],
                             [IntrNoMem]>;
-  def int_ppc_test_data_class
-      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_anyfloat_ty, llvm_i32_ty],
-                              [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_test_data_class : Intrinsic<[llvm_i32_ty],
+                                          [llvm_anyfloat_ty, llvm_i32_ty],
+                                          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
   def int_ppc_fnabs
       : ClangBuiltin<"__builtin_ppc_fnabs">,
         DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;

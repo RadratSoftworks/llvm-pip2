@@ -47,10 +47,6 @@ namespace object {
 class BuildIDFetcher;
 } // namespace object
 
-namespace vfs {
-class FileSystem;
-} // namespace vfs
-
 namespace coverage {
 
 class CoverageMappingReader;
@@ -620,10 +616,8 @@ public:
   /// Ignores non-instrumented object files unless all are not instrumented.
   static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-       vfs::FileSystem &FS, ArrayRef<StringRef> Arches = std::nullopt,
-       StringRef CompilationDir = "",
-       const object::BuildIDFetcher *BIDFetcher = nullptr,
-       bool CheckBinaryIDs = false);
+       ArrayRef<StringRef> Arches = std::nullopt, StringRef CompilationDir = "",
+       const object::BuildIDFetcher *BIDFetcher = nullptr);
 
   /// The number of functions that couldn't have their profiles mapped.
   ///

@@ -21,7 +21,6 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
 #include <cstdint>
@@ -40,6 +39,7 @@ class MCSection;
 class MCStreamer;
 class MCSymbol;
 class raw_ostream;
+class SMLoc;
 class SourceMgr;
 
 namespace mcdwarf {
@@ -70,10 +70,6 @@ public:
 
   /// Returns finalized section.
   SmallString<0> getFinalizedData();
-
-  /// Adds path \p Path to the line string. Returns offset in the
-  /// .debug_line_str section.
-  size_t addString(StringRef Path);
 };
 
 /// Instances of this class represent the name of the dwarf .file directive and
@@ -433,8 +429,8 @@ public:
 class MCDwarfLineAddr {
 public:
   /// Utility function to encode a Dwarf pair of LineDelta and AddrDeltas.
-  static void encode(MCContext &Context, MCDwarfLineTableParams Params,
-                     int64_t LineDelta, uint64_t AddrDelta, SmallVectorImpl<char> &OS);
+  static void Encode(MCContext &Context, MCDwarfLineTableParams Params,
+                     int64_t LineDelta, uint64_t AddrDelta, raw_ostream &OS);
 
   /// Utility function to emit the encoding to a streamer.
   static void Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
@@ -510,59 +506,53 @@ private:
     int Offset;
     unsigned Register2;
   };
-  unsigned AddressSpace = ~0u;
-  SMLoc Loc;
+  unsigned AddressSpace;
   std::vector<char> Values;
   std::string Comment;
 
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, SMLoc Loc,
-                   StringRef V = "", StringRef Comment = "")
-      : Operation(Op), Label(L), Register(R), Offset(O), Loc(Loc),
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, StringRef V,
+                   StringRef Comment = "")
+      : Operation(Op), Label(L), Register(R), Offset(O),
         Values(V.begin(), V.end()), Comment(Comment) {
     assert(Op != OpRegister && Op != OpLLVMDefAspaceCfa);
   }
 
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R1, unsigned R2, SMLoc Loc)
-      : Operation(Op), Label(L), Register(R1), Register2(R2), Loc(Loc) {
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R1, unsigned R2)
+      : Operation(Op), Label(L), Register(R1), Register2(R2) {
     assert(Op == OpRegister);
   }
 
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, unsigned AS,
-                   SMLoc Loc)
-      : Operation(Op), Label(L), Register(R), Offset(O), AddressSpace(AS),
-        Loc(Loc) {
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, unsigned AS)
+      : Operation(Op), Label(L), Register(R), Offset(O), AddressSpace(AS) {
     assert(Op == OpLLVMDefAspaceCfa);
   }
 
 public:
   /// .cfi_def_cfa defines a rule for computing CFA as: take address from
   /// Register and add Offset to it.
-  static MCCFIInstruction cfiDefCfa(MCSymbol *L, unsigned Register, int Offset,
-                                    SMLoc Loc = {}) {
-    return MCCFIInstruction(OpDefCfa, L, Register, Offset, Loc);
+  static MCCFIInstruction cfiDefCfa(MCSymbol *L, unsigned Register,
+                                    int Offset) {
+    return MCCFIInstruction(OpDefCfa, L, Register, Offset, "");
   }
 
   /// .cfi_def_cfa_register modifies a rule for computing CFA. From now
   /// on Register will be used instead of the old one. Offset remains the same.
-  static MCCFIInstruction createDefCfaRegister(MCSymbol *L, unsigned Register,
-                                               SMLoc Loc = {}) {
-    return MCCFIInstruction(OpDefCfaRegister, L, Register, 0, Loc);
+  static MCCFIInstruction createDefCfaRegister(MCSymbol *L, unsigned Register) {
+    return MCCFIInstruction(OpDefCfaRegister, L, Register, 0, "");
   }
 
   /// .cfi_def_cfa_offset modifies a rule for computing CFA. Register
   /// remains the same, but offset is new. Note that it is the absolute offset
   /// that will be added to a defined register to the compute CFA address.
-  static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, int Offset,
-                                          SMLoc Loc = {}) {
-    return MCCFIInstruction(OpDefCfaOffset, L, 0, Offset, Loc);
+  static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, int Offset) {
+    return MCCFIInstruction(OpDefCfaOffset, L, 0, Offset, "");
   }
 
   /// .cfi_adjust_cfa_offset Same as .cfi_def_cfa_offset, but
   /// Offset is a relative value that is added/subtracted from the previous
   /// offset.
-  static MCCFIInstruction createAdjustCfaOffset(MCSymbol *L, int Adjustment,
-                                                SMLoc Loc = {}) {
-    return MCCFIInstruction(OpAdjustCfaOffset, L, 0, Adjustment, Loc);
+  static MCCFIInstruction createAdjustCfaOffset(MCSymbol *L, int Adjustment) {
+    return MCCFIInstruction(OpAdjustCfaOffset, L, 0, Adjustment, "");
   }
 
   // FIXME: Update the remaining docs to use the new proposal wording.
@@ -571,87 +561,82 @@ public:
   /// `DW_OP_constu AS; DW_OP_aspace_bregx R, B` as a location description.
   static MCCFIInstruction createLLVMDefAspaceCfa(MCSymbol *L, unsigned Register,
                                                  int Offset,
-                                                 unsigned AddressSpace,
-                                                 SMLoc Loc) {
+                                                 unsigned AddressSpace) {
     return MCCFIInstruction(OpLLVMDefAspaceCfa, L, Register, Offset,
-                            AddressSpace, Loc);
+                            AddressSpace);
   }
 
   /// .cfi_offset Previous value of Register is saved at offset Offset
   /// from CFA.
   static MCCFIInstruction createOffset(MCSymbol *L, unsigned Register,
-                                       int Offset, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpOffset, L, Register, Offset, Loc);
+                                       int Offset) {
+    return MCCFIInstruction(OpOffset, L, Register, Offset, "");
   }
 
   /// .cfi_rel_offset Previous value of Register is saved at offset
   /// Offset from the current CFA register. This is transformed to .cfi_offset
   /// using the known displacement of the CFA register from the CFA.
   static MCCFIInstruction createRelOffset(MCSymbol *L, unsigned Register,
-                                          int Offset, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRelOffset, L, Register, Offset, Loc);
+                                          int Offset) {
+    return MCCFIInstruction(OpRelOffset, L, Register, Offset, "");
   }
 
   /// .cfi_register Previous value of Register1 is saved in
   /// register Register2.
   static MCCFIInstruction createRegister(MCSymbol *L, unsigned Register1,
-                                         unsigned Register2, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRegister, L, Register1, Register2, Loc);
+                                         unsigned Register2) {
+    return MCCFIInstruction(OpRegister, L, Register1, Register2);
   }
 
   /// .cfi_window_save SPARC register window is saved.
-  static MCCFIInstruction createWindowSave(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpWindowSave, L, 0, 0, Loc);
+  static MCCFIInstruction createWindowSave(MCSymbol *L) {
+    return MCCFIInstruction(OpWindowSave, L, 0, 0, "");
   }
 
   /// .cfi_negate_ra_state AArch64 negate RA state.
-  static MCCFIInstruction createNegateRAState(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpNegateRAState, L, 0, 0, Loc);
+  static MCCFIInstruction createNegateRAState(MCSymbol *L) {
+    return MCCFIInstruction(OpNegateRAState, L, 0, 0, "");
   }
 
   /// .cfi_restore says that the rule for Register is now the same as it
   /// was at the beginning of the function, after all initial instructions added
   /// by .cfi_startproc were executed.
-  static MCCFIInstruction createRestore(MCSymbol *L, unsigned Register,
-                                        SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRestore, L, Register, 0, Loc);
+  static MCCFIInstruction createRestore(MCSymbol *L, unsigned Register) {
+    return MCCFIInstruction(OpRestore, L, Register, 0, "");
   }
 
   /// .cfi_undefined From now on the previous value of Register can't be
   /// restored anymore.
-  static MCCFIInstruction createUndefined(MCSymbol *L, unsigned Register,
-                                          SMLoc Loc = {}) {
-    return MCCFIInstruction(OpUndefined, L, Register, 0, Loc);
+  static MCCFIInstruction createUndefined(MCSymbol *L, unsigned Register) {
+    return MCCFIInstruction(OpUndefined, L, Register, 0, "");
   }
 
   /// .cfi_same_value Current value of Register is the same as in the
   /// previous frame. I.e., no restoration is needed.
-  static MCCFIInstruction createSameValue(MCSymbol *L, unsigned Register,
-                                          SMLoc Loc = {}) {
-    return MCCFIInstruction(OpSameValue, L, Register, 0, Loc);
+  static MCCFIInstruction createSameValue(MCSymbol *L, unsigned Register) {
+    return MCCFIInstruction(OpSameValue, L, Register, 0, "");
   }
 
   /// .cfi_remember_state Save all current rules for all registers.
-  static MCCFIInstruction createRememberState(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRememberState, L, 0, 0, Loc);
+  static MCCFIInstruction createRememberState(MCSymbol *L) {
+    return MCCFIInstruction(OpRememberState, L, 0, 0, "");
   }
 
   /// .cfi_restore_state Restore the previously saved state.
-  static MCCFIInstruction createRestoreState(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRestoreState, L, 0, 0, Loc);
+  static MCCFIInstruction createRestoreState(MCSymbol *L) {
+    return MCCFIInstruction(OpRestoreState, L, 0, 0, "");
   }
 
   /// .cfi_escape Allows the user to add arbitrary bytes to the unwind
   /// info.
   static MCCFIInstruction createEscape(MCSymbol *L, StringRef Vals,
-                                       SMLoc Loc = {}, StringRef Comment = "") {
-    return MCCFIInstruction(OpEscape, L, 0, 0, Loc, Vals, Comment);
+                                       StringRef Comment = "") {
+    return MCCFIInstruction(OpEscape, L, 0, 0, Vals, Comment);
   }
 
   /// A special wrapper for .cfi_escape that indicates GNU_ARGS_SIZE
-  static MCCFIInstruction createGnuArgsSize(MCSymbol *L, int Size,
-                                            SMLoc Loc = {}) {
-    return MCCFIInstruction(OpGnuArgsSize, L, 0, Size, Loc);
+  static MCCFIInstruction createGnuArgsSize(MCSymbol *L, int Size) {
+    return MCCFIInstruction(OpGnuArgsSize, L, 0, Size, "");
   }
 
   OpType getOperation() const { return Operation; }
@@ -689,8 +674,9 @@ public:
     return StringRef(&Values[0], Values.size());
   }
 
-  StringRef getComment() const { return Comment; }
-  SMLoc getLoc() const { return Loc; }
+  StringRef getComment() const {
+    return Comment;
+  }
 };
 
 struct MCDwarfFrameInfo {
@@ -718,8 +704,9 @@ public:
   // This emits the frame info section.
   //
   static void Emit(MCObjectStreamer &streamer, MCAsmBackend *MAB, bool isEH);
-  static void encodeAdvanceLoc(MCContext &Context, uint64_t AddrDelta,
-                               SmallVectorImpl<char> &OS);
+  static void EmitAdvanceLoc(MCObjectStreamer &Streamer, uint64_t AddrDelta);
+  static void EncodeAdvanceLoc(MCContext &Context, uint64_t AddrDelta,
+                               raw_ostream &OS);
 };
 
 } // end namespace llvm

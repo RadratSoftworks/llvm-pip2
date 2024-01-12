@@ -31,11 +31,6 @@ class Pass;
 class TargetMachine;
 class raw_ostream;
 
-template <typename T> class IntrusiveRefCntPtr;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
-
 } // End llvm namespace
 
 // List of target independent CodeGen pass IDs.
@@ -499,7 +494,8 @@ namespace llvm {
   /// printing assembly.
   ModulePass *createMachineOutlinerPass(bool RunOnAllFunctions = true);
 
-  /// This pass expands the reduction intrinsics into sequences of shuffles.
+  /// This pass expands the experimental reduction intrinsics into sequences of
+  /// shuffles.
   FunctionPass *createExpandReductionsPass();
 
   // This pass replaces intrinsics operating on vector operands with calls to
@@ -541,7 +537,7 @@ namespace llvm {
   FunctionPass *createEHContGuardCatchretPass();
 
   /// Create Hardware Loop pass. \see HardwareLoops.cpp
-  FunctionPass *createHardwareLoopsLegacyPass();
+  FunctionPass *createHardwareLoopsPass();
 
   /// This pass inserts pseudo probe annotation for callsite profiling.
   FunctionPass *createPseudoProbeInserter();
@@ -555,10 +551,9 @@ namespace llvm {
   createMIRAddFSDiscriminatorsPass(sampleprof::FSDiscriminatorPass P);
 
   /// Read Flow Sensitive Profile.
-  FunctionPass *
-  createMIRProfileLoaderPass(std::string File, std::string RemappingFile,
-                             sampleprof::FSDiscriminatorPass P,
-                             IntrusiveRefCntPtr<vfs::FileSystem> FS);
+  FunctionPass *createMIRProfileLoaderPass(std::string File,
+                                           std::string RemappingFile,
+                                           sampleprof::FSDiscriminatorPass P);
 
   /// Creates MIR Debugify pass. \see MachineDebugify.cpp
   ModulePass *createDebugifyMachineModulePass();
@@ -596,11 +591,6 @@ namespace llvm {
 
   /// This pass converts conditional moves to conditional jumps when profitable.
   FunctionPass *createSelectOptimizePass();
-
-  FunctionPass *createCallBrPass();
-
-  /// Lowers KCFI operand bundles for indirect calls.
-  FunctionPass *createKCFIPass();
 } // End llvm namespace
 
 #endif

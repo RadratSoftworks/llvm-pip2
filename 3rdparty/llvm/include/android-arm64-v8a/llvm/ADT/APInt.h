@@ -28,7 +28,6 @@ class FoldingSetNodeID;
 class StringRef;
 class hash_code;
 class raw_ostream;
-struct Align;
 
 template <typename T> class SmallVectorImpl;
 template <typename T> class ArrayRef;
@@ -177,6 +176,9 @@ public:
   /// Get the '0' value for the specified bit-width.
   static APInt getZero(unsigned numBits) { return APInt(numBits, 0); }
 
+  /// NOTE: This is soft-deprecated.  Please use `getZero()` instead.
+  static APInt getNullValue(unsigned numBits) { return getZero(numBits); }
+
   /// Return an APInt zero bits wide.
   static APInt getZeroWidth() { return getZero(0); }
 
@@ -212,6 +214,9 @@ public:
   static APInt getAllOnes(unsigned numBits) {
     return APInt(numBits, WORDTYPE_MAX, true);
   }
+
+  /// NOTE: This is soft-deprecated.  Please use `getAllOnes()` instead.
+  static APInt getAllOnesValue(unsigned numBits) { return getAllOnes(numBits); }
 
   /// Return an APInt with exactly one bit set in the result.
   static APInt getOneBitSet(unsigned numBits, unsigned BitNo) {
@@ -342,7 +347,7 @@ public:
   ///
   /// \returns true if this APInt only has the specified bit set.
   bool isOneBitSet(unsigned BitNo) const {
-    return (*this)[BitNo] && popcount() == 1;
+    return (*this)[BitNo] && countPopulation() == 1;
   }
 
   /// Determine if all bits are set.  This is true for zero-width values.
@@ -354,12 +359,18 @@ public:
     return countTrailingOnesSlowCase() == BitWidth;
   }
 
+  /// NOTE: This is soft-deprecated.  Please use `isAllOnes()` instead.
+  bool isAllOnesValue() const { return isAllOnes(); }
+
   /// Determine if this value is zero, i.e. all bits are clear.
   bool isZero() const {
     if (isSingleWord())
       return U.VAL == 0;
     return countLeadingZerosSlowCase() == BitWidth;
   }
+
+  /// NOTE: This is soft-deprecated.  Please use `isZero()` instead.
+  bool isNullValue() const { return isZero(); }
 
   /// Determine if this is a value of 1.
   ///
@@ -369,6 +380,9 @@ public:
       return U.VAL == 1;
     return countLeadingZerosSlowCase() == BitWidth - 1;
   }
+
+  /// NOTE: This is soft-deprecated.  Please use `isOne()` instead.
+  bool isOneValue() const { return isOne(); }
 
   /// Determine if this is the largest unsigned value.
   ///
@@ -429,14 +443,10 @@ public:
     if (isNonNegative())
       return false;
     // NegatedPowerOf2 - shifted mask in the top bits.
-    unsigned LO = countl_one();
-    unsigned TZ = countr_zero();
+    unsigned LO = countLeadingOnes();
+    unsigned TZ = countTrailingZeros();
     return (LO + TZ) == BitWidth;
   }
-
-  /// Checks if this APInt -interpreted as an address- is aligned to the
-  /// provided value.
-  bool isAligned(Align A) const;
 
   /// Check if the APInt's value is returned by getSignMask.
   ///
@@ -490,7 +500,7 @@ public:
       return isShiftedMask_64(U.VAL);
     unsigned Ones = countPopulationSlowCase();
     unsigned LeadZ = countLeadingZerosSlowCase();
-    return (Ones + LeadZ + countr_zero()) == BitWidth;
+    return (Ones + LeadZ + countTrailingZeros()) == BitWidth;
   }
 
   /// Return true if this APInt value contains a non-empty sequence of ones with
@@ -993,9 +1003,7 @@ public:
   APInt smul_ov(const APInt &RHS, bool &Overflow) const;
   APInt umul_ov(const APInt &RHS, bool &Overflow) const;
   APInt sshl_ov(const APInt &Amt, bool &Overflow) const;
-  APInt sshl_ov(unsigned Amt, bool &Overflow) const;
   APInt ushl_ov(const APInt &Amt, bool &Overflow) const;
-  APInt ushl_ov(unsigned Amt, bool &Overflow) const;
 
   // Operations that saturate
   APInt sadd_sat(const APInt &RHS) const;
@@ -1005,9 +1013,7 @@ public:
   APInt smul_sat(const APInt &RHS) const;
   APInt umul_sat(const APInt &RHS) const;
   APInt sshl_sat(const APInt &RHS) const;
-  APInt sshl_sat(unsigned RHS) const;
   APInt ushl_sat(const APInt &RHS) const;
-  APInt ushl_sat(unsigned RHS) const;
 
   /// Array-indexing support.
   ///
@@ -1454,7 +1460,7 @@ public:
   /// This function returns the number of active bits which is defined as the
   /// bit width minus the number of leading zeros. This is used in several
   /// computations to see how "wide" the value is.
-  unsigned getActiveBits() const { return BitWidth - countl_zero(); }
+  unsigned getActiveBits() const { return BitWidth - countLeadingZeros(); }
 
   /// Compute the number of active words in the value of this APInt.
   ///
@@ -1476,6 +1482,9 @@ public:
   unsigned getSignificantBits() const {
     return BitWidth - getNumSignBits() + 1;
   }
+
+  /// NOTE: This is soft-deprecated.  Please use `getSignificantBits()` instead.
+  unsigned getMinSignedBits() const { return getSignificantBits(); }
 
   /// Get zero extended value
   ///
@@ -1532,86 +1541,82 @@ public:
   /// parsing the value in the string.
   static unsigned getSufficientBitsNeeded(StringRef Str, uint8_t Radix);
 
-  /// The APInt version of std::countl_zero.
+  /// The APInt version of the countLeadingZeros functions in
+  ///   MathExtras.h.
   ///
   /// It counts the number of zeros from the most significant bit to the first
   /// one bit.
   ///
   /// \returns BitWidth if the value is zero, otherwise returns the number of
   ///   zeros from the most significant bit to the first one bits.
-  unsigned countl_zero() const {
+  unsigned countLeadingZeros() const {
     if (isSingleWord()) {
       unsigned unusedBits = APINT_BITS_PER_WORD - BitWidth;
-      return llvm::countl_zero(U.VAL) - unusedBits;
+      return llvm::countLeadingZeros(U.VAL) - unusedBits;
     }
     return countLeadingZerosSlowCase();
   }
 
-  unsigned countLeadingZeros() const { return countl_zero(); }
-
   /// Count the number of leading one bits.
   ///
-  /// This function is an APInt version of std::countl_one. It counts the number
-  /// of ones from the most significant bit to the first zero bit.
+  /// This function is an APInt version of the countLeadingOnes
+  /// functions in MathExtras.h. It counts the number of ones from the most
+  /// significant bit to the first zero bit.
   ///
   /// \returns 0 if the high order bit is not set, otherwise returns the number
   /// of 1 bits from the most significant to the least
-  unsigned countl_one() const {
+  unsigned countLeadingOnes() const {
     if (isSingleWord()) {
       if (LLVM_UNLIKELY(BitWidth == 0))
         return 0;
-      return llvm::countl_one(U.VAL << (APINT_BITS_PER_WORD - BitWidth));
+      return llvm::countLeadingOnes(U.VAL << (APINT_BITS_PER_WORD - BitWidth));
     }
     return countLeadingOnesSlowCase();
   }
 
-  unsigned countLeadingOnes() const { return countl_one(); }
-
   /// Computes the number of leading bits of this APInt that are equal to its
   /// sign bit.
   unsigned getNumSignBits() const {
-    return isNegative() ? countl_one() : countl_zero();
+    return isNegative() ? countLeadingOnes() : countLeadingZeros();
   }
 
   /// Count the number of trailing zero bits.
   ///
-  /// This function is an APInt version of std::countr_zero. It counts the
-  /// number of zeros from the least significant bit to the first set bit.
+  /// This function is an APInt version of the countTrailingZeros
+  /// functions in MathExtras.h. It counts the number of zeros from the least
+  /// significant bit to the first set bit.
   ///
   /// \returns BitWidth if the value is zero, otherwise returns the number of
   /// zeros from the least significant bit to the first one bit.
-  unsigned countr_zero() const {
+  unsigned countTrailingZeros() const {
     if (isSingleWord()) {
-      unsigned TrailingZeros = llvm::countr_zero(U.VAL);
+      unsigned TrailingZeros = llvm::countTrailingZeros(U.VAL);
       return (TrailingZeros > BitWidth ? BitWidth : TrailingZeros);
     }
     return countTrailingZerosSlowCase();
   }
 
-  unsigned countTrailingZeros() const { return countr_zero(); }
-
   /// Count the number of trailing one bits.
   ///
-  /// This function is an APInt version of std::countr_one. It counts the number
-  /// of ones from the least significant bit to the first zero bit.
+  /// This function is an APInt version of the countTrailingOnes
+  /// functions in MathExtras.h. It counts the number of ones from the least
+  /// significant bit to the first zero bit.
   ///
   /// \returns BitWidth if the value is all ones, otherwise returns the number
   /// of ones from the least significant bit to the first zero bit.
-  unsigned countr_one() const {
+  unsigned countTrailingOnes() const {
     if (isSingleWord())
-      return llvm::countr_one(U.VAL);
+      return llvm::countTrailingOnes(U.VAL);
     return countTrailingOnesSlowCase();
   }
 
-  unsigned countTrailingOnes() const { return countr_one(); }
-
   /// Count the number of bits set.
   ///
-  /// This function is an APInt version of std::popcount. It counts the number
-  /// of 1 bits in the APInt value.
+  /// This function is an APInt version of the countPopulation functions
+  /// in MathExtras.h. It counts the number of 1 bits in the APInt value.
   ///
   /// \returns 0 if the value is zero, otherwise returns the number of set bits.
-  unsigned popcount() const {
+  unsigned countPopulation() const {
     if (isSingleWord())
       return llvm::popcount(U.VAL);
     return countPopulationSlowCase();
@@ -1623,10 +1628,9 @@ public:
   void print(raw_ostream &OS, bool isSigned) const;
 
   /// Converts an APInt to a string and append it to Str.  Str is commonly a
-  /// SmallString. If Radix > 10, UpperCase determine the case of letter
-  /// digits.
+  /// SmallString.
   void toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
-                bool formatAsCLiteral = false, bool UpperCase = true) const;
+                bool formatAsCLiteral = false) const;
 
   /// Considers the APInt to be unsigned and converts it into a string in the
   /// radix given. The radix can be 2, 8, 10 16, or 36.
@@ -1661,7 +1665,7 @@ public:
   /// The conversion does not do a translation from integer to double, it just
   /// re-interprets the bits as a double. Note that it is valid to do this on
   /// any bit width. Exactly 64 bits will be translated.
-  double bitsToDouble() const { return llvm::bit_cast<double>(getWord(0)); }
+  double bitsToDouble() const { return BitsToDouble(getWord(0)); }
 
   /// Converts APInt bits to a float
   ///
@@ -1669,7 +1673,7 @@ public:
   /// re-interprets the bits as a float. Note that it is valid to do this on
   /// any bit width. Exactly 32 bits will be translated.
   float bitsToFloat() const {
-    return llvm::bit_cast<float>(static_cast<uint32_t>(getWord(0)));
+    return BitsToFloat(static_cast<uint32_t>(getWord(0)));
   }
 
   /// Converts a double to APInt bits.
@@ -1677,7 +1681,7 @@ public:
   /// The conversion does not do a translation from double to integer, it just
   /// re-interprets the bits of the double.
   static APInt doubleToBits(double V) {
-    return APInt(sizeof(double) * CHAR_BIT, llvm::bit_cast<uint64_t>(V));
+    return APInt(sizeof(double) * CHAR_BIT, DoubleToBits(V));
   }
 
   /// Converts a float to APInt bits.
@@ -1685,7 +1689,7 @@ public:
   /// The conversion does not do a translation from float to integer, it just
   /// re-interprets the bits of the float.
   static APInt floatToBits(float V) {
-    return APInt(sizeof(float) * CHAR_BIT, llvm::bit_cast<uint32_t>(V));
+    return APInt(sizeof(float) * CHAR_BIT, FloatToBits(V));
   }
 
   /// @}

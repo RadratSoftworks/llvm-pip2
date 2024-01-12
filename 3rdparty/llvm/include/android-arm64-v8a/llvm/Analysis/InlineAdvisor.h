@@ -357,8 +357,7 @@ public:
 };
 
 std::unique_ptr<InlineAdvisor>
-getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
-                      std::function<bool(CallBase &)> GetDefaultAdvice);
+getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM);
 
 std::unique_ptr<InlineAdvisor>
 getDevelopmentModeAdvisor(Module &M, ModuleAnalysisManager &MAM,

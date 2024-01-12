@@ -94,7 +94,6 @@ struct ParserCallbacks {
     bool IsThinLTO;
     bool HasSummary;
     bool EnableSplitLTOUnit;
-    bool UnifiedLTO;
   };
 
   /// Represents a module in a bitcode file.

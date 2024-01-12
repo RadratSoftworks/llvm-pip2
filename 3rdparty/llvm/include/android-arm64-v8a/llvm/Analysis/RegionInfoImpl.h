@@ -254,9 +254,7 @@ void RegionBase<Tr>::verifyBBInRegion(BlockT *BB) const {
   if (entry != BB) {
     for (BlockT *Pred : make_range(InvBlockTraits::child_begin(BB),
                                    InvBlockTraits::child_end(BB))) {
-      // Allow predecessors that are unreachable, as these are ignored during
-      // region analysis.
-      if (!contains(Pred) && DT->isReachableFromEntry(Pred))
+      if (!contains(Pred))
         report_fatal_error("Broken region found: edges entering the region must "
                            "go to the entry node!");
     }

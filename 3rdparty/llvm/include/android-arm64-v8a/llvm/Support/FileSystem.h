@@ -263,7 +263,7 @@ public:
         NumLinks(LinkCount), VolumeSerialNumber(VolumeSerialNumber),
         FileIndexHigh(FileIndexHigh), FileIndexLow(FileIndexLow) {}
   #endif
-  
+
   UniqueID getUniqueID() const;
   uint32_t getLinkCount() const;
 };

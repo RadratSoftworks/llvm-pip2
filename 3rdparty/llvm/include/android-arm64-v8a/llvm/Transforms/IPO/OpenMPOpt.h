@@ -29,9 +29,6 @@ bool containsOpenMP(Module &M);
 /// Helper to determine if \p M is a OpenMP target offloading device module.
 bool isOpenMPDevice(Module &M);
 
-/// Return true iff \p Fn is a GPU kernel; \p Fn has the "kernel" attribute.
-bool isKernel(Function &Fn);
-
 /// Get OpenMP device kernels in \p M.
 KernelSet getDeviceKernels(Module &M);
 
@@ -40,7 +37,7 @@ KernelSet getDeviceKernels(Module &M);
 /// OpenMP optimizations pass.
 class OpenMPOptPass : public PassInfoMixin<OpenMPOptPass> {
 public:
-  OpenMPOptPass() = default;
+  OpenMPOptPass() : LTOPhase(ThinOrFullLTOPhase::None) {}
   OpenMPOptPass(ThinOrFullLTOPhase LTOPhase) : LTOPhase(LTOPhase) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
@@ -51,7 +48,7 @@ private:
 
 class OpenMPOptCGSCCPass : public PassInfoMixin<OpenMPOptCGSCCPass> {
 public:
-  OpenMPOptCGSCCPass() = default;
+  OpenMPOptCGSCCPass() : LTOPhase(ThinOrFullLTOPhase::None) {}
   OpenMPOptCGSCCPass(ThinOrFullLTOPhase LTOPhase) : LTOPhase(LTOPhase) {}
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,

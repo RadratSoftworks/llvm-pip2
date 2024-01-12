@@ -62,7 +62,6 @@ private:
   ArrayRef<Info> OptionInfos;
   bool IgnoreCase;
   bool GroupedShortOptions = false;
-  bool DashDashParsing = false;
   const char *EnvVar = nullptr;
 
   unsigned InputOptionID = 0;
@@ -139,10 +138,6 @@ public:
 
   /// Support grouped short options. e.g. -ab represents -a -b.
   void setGroupedShortOptions(bool Value) { GroupedShortOptions = Value; }
-
-  /// Set whether "--" stops option parsing and treats all subsequent arguments
-  /// as positional. E.g. -- -a -b gives two positional inputs.
-  void setDashDashParsing(bool Value) { DashDashParsing = Value; }
 
   /// Find possible value for given flags. This is used for shell
   /// autocompletion.

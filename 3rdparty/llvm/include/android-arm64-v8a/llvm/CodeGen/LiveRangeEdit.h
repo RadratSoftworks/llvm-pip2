@@ -97,7 +97,8 @@ private:
   /// a load, eliminate the register by folding the def into the use.
   bool foldAsLoad(LiveInterval *LI, SmallVectorImpl<MachineInstr *> &Dead);
 
-  using ToShrinkSet = SmallSetVector<LiveInterval *, 8>;
+  using ToShrinkSet = SetVector<LiveInterval *, SmallVector<LiveInterval *, 8>,
+                                SmallPtrSet<LiveInterval *, 8>>;
 
   /// Helper for eliminateDeadDefs.
   void eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink);
@@ -210,7 +211,7 @@ public:
   /// by new MI in the index map.
   /// Return the SlotIndex of the new instruction.
   SlotIndex rematerializeAt(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, Register DestReg,
+                            MachineBasicBlock::iterator MI, unsigned DestReg,
                             const Remat &RM, const TargetRegisterInfo &,
                             bool Late = false, unsigned SubIdx = 0,
                             MachineInstr *ReplaceIndexMI = nullptr);

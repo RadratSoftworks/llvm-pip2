@@ -11,8 +11,4 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifdef __GNUC__
-#pragma GCC warning                                                            \
-    "This header is deprecated, please use llvm/TargetParser/Host.h"
-#endif
 #include "llvm/TargetParser/Host.h"

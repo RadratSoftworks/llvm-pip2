@@ -14,6 +14,7 @@
 #define LLVM_TARGET_TARGETMACHINE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
@@ -22,7 +23,6 @@
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <string>
 #include <utility>
@@ -234,8 +234,6 @@ public:
 
   /// Set the code model.
   void setCodeModel(CodeModel::Model CM) { CMModel = CM; }
-
-  bool isLargeData() const;
 
   bool isPositionIndependent() const;
 
@@ -502,9 +500,6 @@ public:
   /// The default variant to use in unqualified `asm` instructions.
   /// If this returns 0, `asm "$(foo$|bar$)"` will evaluate to `asm "foo"`.
   virtual int unqualifiedInlineAsmVariant() const { return 0; }
-
-  // MachineRegisterInfo callback function
-  virtual void registerMachineRegisterInfoCallback(MachineFunction &MF) const {}
 };
 
 /// Helper method for getting the code model, returning Default if

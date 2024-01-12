@@ -12,7 +12,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -20,12 +19,12 @@
 namespace llvm {
 
 class DataExtractor;
+class DWARFFormValue;
 class DWARFUnit;
 class raw_ostream;
 
 class DWARFAbbreviationDeclaration {
 public:
-  enum class ExtractState { Complete, MoreItems };
   struct AttributeSpec {
     AttributeSpec(dwarf::Attribute A, dwarf::Form F, int64_t Value)
         : Attr(A), Form(F), Value(Value) {
@@ -38,13 +37,6 @@ public:
       this->ByteSize.HasByteSize = ByteSize.has_value();
       if (this->ByteSize.HasByteSize)
         this->ByteSize.ByteSize = *ByteSize;
-    }
-
-    DWARFFormValue getFormValue() const {
-      if (Form == dwarf::DW_FORM_implicit_const)
-        return DWARFFormValue::createFromSValue(Form, getImplicitConstValue());
-
-      return DWARFFormValue(Form);
     }
 
     dwarf::Attribute Attr;
@@ -173,7 +165,7 @@ public:
   getAttributeValueFromOffset(uint32_t AttrIndex, uint64_t Offset,
                               const DWARFUnit &U) const;
 
-  llvm::Expected<ExtractState> extract(DataExtractor Data, uint64_t *OffsetPtr);
+  bool extract(DataExtractor Data, uint64_t* OffsetPtr);
   void dump(raw_ostream &OS) const;
 
   // Return an optional byte size of all attribute data in this abbreviation

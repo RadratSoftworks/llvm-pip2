@@ -69,7 +69,7 @@ public:
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   const MachineLoopInfo *MLI = nullptr;
   const MachineDominatorTree *MDT = nullptr;
-  const InstrItineraryData *InstrItins = nullptr;
+  const InstrItineraryData *InstrItins;
   const TargetInstrInfo *TII = nullptr;
   RegisterClassInfo RegClassInfo;
   bool disabledByPragma = false;
@@ -168,7 +168,7 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
     SmallVector<SmallVector<int, 4>, 16> AdjK;
     // Node to Index from ScheduleDAGTopologicalSort
     std::vector<int> *Node2Idx;
-    unsigned NumPaths = 0u;
+    unsigned NumPaths;
     static unsigned MaxPaths;
 
   public:
@@ -179,8 +179,7 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
       for (const auto &NodeNum : Topo)
         Node2Idx->at(NodeNum) = Idx++;
     }
-    Circuits &operator=(const Circuits &other) = delete;
-    Circuits(const Circuits &other) = delete;
+
     ~Circuits() { delete Node2Idx; }
 
     /// Reset the data structures used in the circuit algorithm.
@@ -311,7 +310,7 @@ private:
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
                              unsigned &OffsetPos, unsigned &NewBase,
                              int64_t &NewOffset);
-  void postProcessDAG();
+  void postprocessDAG();
   /// Set the Minimum Initiation Interval for this schedule attempt.
   void setMII(unsigned ResMII, unsigned RecMII);
   /// Set the Maximum Initiation Interval for this schedule attempt.
@@ -465,7 +464,7 @@ private:
   /// processor resource masks. There is exactly one element per each processor
   /// resource declared by the scheduling model.
   llvm::SmallVector<uint64_t, DefaultProcResSize> ProcResourceMasks;
-  int InitiationInterval = 0;
+  int InitiationInterval;
   /// The number of micro operations that can be scheduled at a cycle.
   int IssueWidth;
 

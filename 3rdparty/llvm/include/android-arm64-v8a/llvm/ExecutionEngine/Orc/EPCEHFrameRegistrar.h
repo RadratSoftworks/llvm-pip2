@@ -27,7 +27,7 @@ class EPCEHFrameRegistrar : public jitlink::EHFrameRegistrar {
 public:
   /// Create from a ExecutorProcessControl instance alone. This will use
   /// the EPC's lookupSymbols method to find the registration/deregistration
-  /// function addresses by name.
+  /// funciton addresses by name.
   ///
   /// If RegistrationFunctionsDylib is non-None then it will be searched to
   /// find the registration functions. If it is None then the process dylib

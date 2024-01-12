@@ -55,10 +55,10 @@ protected:
   DebugHandlerBase(AsmPrinter *A);
 
   /// Target of debug info emission.
-  AsmPrinter *Asm = nullptr;
+  AsmPrinter *Asm;
 
   /// Collected machine module information.
-  MachineModuleInfo *MMI = nullptr;
+  MachineModuleInfo *MMI;
 
   /// Previous instruction's location information. This is used to
   /// determine label location to indicate scope boundaries in debug info.
@@ -73,7 +73,7 @@ protected:
   DebugLoc PrologEndLoc;
 
   /// This block includes epilogue instructions.
-  const MachineBasicBlock *EpilogBeginBlock = nullptr;
+  const MachineBasicBlock *EpilogBeginBlock;
 
   /// If nonnull, stores the current machine instruction we're processing.
   const MachineInstr *CurMI = nullptr;

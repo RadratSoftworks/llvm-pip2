@@ -60,8 +60,7 @@ struct CompileUnitIdentifiers {
   const char *DWOName = "";
 };
 
-Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
-            bool ContinueOnCuIndexOverflow);
+Error write(MCStreamer &Out, ArrayRef<std::string> Inputs);
 
 unsigned getContributionIndex(DWARFSectionKind Kind, uint32_t IndexVersion);
 

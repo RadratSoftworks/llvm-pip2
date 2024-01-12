@@ -218,9 +218,7 @@ class StructType : public Type {
     SCDB_HasBody = 1,
     SCDB_Packed = 2,
     SCDB_IsLiteral = 4,
-    SCDB_IsSized = 8,
-    SCDB_ContainsScalableVector = 16,
-    SCDB_NotContainsScalableVector = 32
+    SCDB_IsSized = 8
   };
 
   /// For a named struct that actually has a name, this is a pointer to the
@@ -286,16 +284,7 @@ public:
   bool isSized(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
 
   /// Returns true if this struct contains a scalable vector.
-  bool
-  containsScalableVectorType(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
-
-  /// Returns true if this struct contains homogeneous scalable vector types.
-  /// Note that the definition of homogeneous scalable vector type is not
-  /// recursive here. That means the following structure will return false
-  /// when calling this function.
-  /// {{<vscale x 2 x i32>, <vscale x 4 x i64>},
-  ///  {<vscale x 2 x i32>, <vscale x 4 x i64>}}
-  bool containsHomogeneousScalableVectorTypes() const;
+  bool containsScalableVectorType() const;
 
   /// Return true if this is a named struct that has a non-empty name.
   bool hasName() const { return SymbolTableEntry != nullptr; }
@@ -641,7 +630,10 @@ inline ElementCount VectorType::getElementCount() const {
 
 /// Class to represent pointers.
 class PointerType : public Type {
+  explicit PointerType(Type *ElType, unsigned AddrSpace);
   explicit PointerType(LLVMContext &C, unsigned AddrSpace);
+
+  Type *PointeeTy;
 
 public:
   PointerType(const PointerType &) = delete;
@@ -671,14 +663,14 @@ public:
   /// given address space. This is only useful during the opaque pointer
   /// transition.
   /// TODO: remove after opaque pointer transition is complete.
-  [[deprecated("Use PointerType::get() with LLVMContext argument instead")]]
   static PointerType *getWithSamePointeeType(PointerType *PT,
                                              unsigned AddressSpace) {
-    return get(PT->getContext(), AddressSpace);
+    if (PT->isOpaque())
+      return get(PT->getContext(), AddressSpace);
+    return get(PT->PointeeTy, AddressSpace);
   }
 
-  [[deprecated("Always returns true")]]
-  bool isOpaque() const { return true; }
+  bool isOpaque() const { return !PointeeTy; }
 
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);
@@ -693,18 +685,16 @@ public:
   /// type matches Ty. Primarily used for checking if an instruction's pointer
   /// operands are valid types. Will be useless after non-opaque pointers are
   /// removed.
-  [[deprecated("Always returns true")]]
-  bool isOpaqueOrPointeeTypeMatches(Type *) {
-    return true;
+  bool isOpaqueOrPointeeTypeMatches(Type *Ty) {
+    return isOpaque() || PointeeTy == Ty;
   }
 
   /// Return true if both pointer types have the same element type. Two opaque
   /// pointers are considered to have the same element type, while an opaque
   /// and a non-opaque pointer have different element types.
   /// TODO: Remove after opaque pointer transition is complete.
-  [[deprecated("Always returns true")]]
   bool hasSameElementTypeAs(PointerType *Other) {
-    return true;
+    return PointeeTy == Other->PointeeTy;
   }
 
   /// Implement support type inquiry through isa, cast, and dyn_cast.

@@ -14,7 +14,6 @@
 #define LLVM_CODEGEN_ACCELTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -143,6 +142,9 @@ public:
     std::vector<AccelTableData *> Values;
     MCSymbol *Sym;
 
+    HashData(DwarfStringPoolEntryRef Name, HashFn *Hash)
+        : Name(Name), HashValue(Hash(Name.getString())) {}
+
 #ifndef NDEBUG
     void print(raw_ostream &OS) const;
     void dump() const { print(dbgs()); }
@@ -155,19 +157,19 @@ protected:
   /// Allocator for HashData and Values.
   BumpPtrAllocator Allocator;
 
-  using StringEntries = MapVector<StringRef, HashData>;
+  using StringEntries = StringMap<HashData, BumpPtrAllocator &>;
   StringEntries Entries;
 
   HashFn *Hash;
-  uint32_t BucketCount = 0;
-  uint32_t UniqueHashCount = 0;
+  uint32_t BucketCount;
+  uint32_t UniqueHashCount;
 
   HashList Hashes;
   BucketList Buckets;
 
   void computeBucketCount();
 
-  AccelTableBase(HashFn *Hash) : Hash(Hash) {}
+  AccelTableBase(HashFn *Hash) : Entries(Allocator), Hash(Hash) {}
 
 public:
   void finalize(AsmPrinter *Asm, StringRef Prefix);
@@ -205,13 +207,10 @@ void AccelTable<AccelTableDataT>::addName(DwarfStringPoolEntryRef Name,
   assert(Buckets.empty() && "Already finalized!");
   // If the string is in the list already then add this die to the list
   // otherwise add a new one.
-  auto &It = Entries[Name.getString()];
-  if (It.Values.empty()) {
-    It.Name = Name;
-    It.HashValue = Hash(Name.getString());
-  }
-  It.Values.push_back(new (Allocator)
-                          AccelTableDataT(std::forward<Types>(Args)...));
+  auto Iter = Entries.try_emplace(Name.getString(), Name, Hash).first;
+  assert(Iter->second.Name == Name);
+  Iter->second.Values.push_back(
+      new (Allocator) AccelTableDataT(std::forward<Types>(Args)...));
 }
 
 /// A base class for different implementations of Data classes for Apple

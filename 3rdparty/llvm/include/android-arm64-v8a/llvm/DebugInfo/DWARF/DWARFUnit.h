@@ -43,9 +43,6 @@ class DWARFObject;
 class raw_ostream;
 struct DIDumpOptions;
 struct DWARFSection;
-namespace dwarflinker_parallel {
-class CompileUnit;
-}
 
 /// Base class describing the header of any kind of "unit."  Some information
 /// is specific to certain unit types.  We separate this class out so we can
@@ -256,8 +253,6 @@ class DWARFUnit {
   std::shared_ptr<DWARFUnit> DWO;
 
 protected:
-  friend dwarflinker_parallel::CompileUnit;
-
   /// Return the index of a \p Die entry inside the unit's DIE vector.
   ///
   /// It is illegal to call this method with a DIE that hasn't be
@@ -353,15 +348,6 @@ public:
 
   std::optional<uint64_t> getAddrOffsetSectionBase() const {
     return AddrOffsetSectionBase;
-  }
-
-  /// Returns offset to the indexed address value inside .debug_addr section.
-  std::optional<uint64_t> getIndexedAddressOffset(uint64_t Index) {
-    if (std::optional<uint64_t> AddrOffsetSectionBase =
-            getAddrOffsetSectionBase())
-      return *AddrOffsetSectionBase + Index * getAddressByteSize();
-
-    return std::nullopt;
   }
 
   /// Recursively update address to Die map.

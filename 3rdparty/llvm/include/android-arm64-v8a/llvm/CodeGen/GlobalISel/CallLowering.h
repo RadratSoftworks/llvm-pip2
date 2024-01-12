@@ -17,14 +17,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
+#include "llvm/Support/MachineValueType.h"
 #include <cstdint>
 #include <functional>
 
@@ -188,7 +188,7 @@ public:
       if (getAssignFn(State.isVarArg())(ValNo, ValVT, LocVT, LocInfo, Flags,
                                         State))
         return true;
-      StackSize = State.getStackSize();
+      StackOffset = State.getNextStackOffset();
       return false;
     }
 
@@ -199,8 +199,9 @@ public:
     /// as AssignFn on most targets.
     CCAssignFn *AssignFnVarArg;
 
-    /// The size of the currently allocated portion of the stack.
-    uint64_t StackSize = 0;
+    /// Stack offset for next argument. At the end of argument evaluation, this
+    /// is typically the total stack size.
+    uint64_t StackOffset = 0;
 
     /// Select the appropriate assignment function depending on whether this is
     /// a variadic call.

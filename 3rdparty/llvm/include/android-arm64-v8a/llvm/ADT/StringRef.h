@@ -264,10 +264,7 @@ namespace llvm {
 
     /// Check if this string starts with the given \p Prefix, ignoring case.
     [[nodiscard]] bool starts_with_insensitive(StringRef Prefix) const;
-    [[nodiscard]] LLVM_DEPRECATED(
-        "Use starts_with_insensitive instead",
-        "starts_with_insensitive") bool startswith_insensitive(StringRef Prefix)
-        const {
+    [[nodiscard]] bool startswith_insensitive(StringRef Prefix) const {
       return starts_with_insensitive(Prefix);
     }
 
@@ -283,10 +280,7 @@ namespace llvm {
 
     /// Check if this string ends with the given \p Suffix, ignoring case.
     [[nodiscard]] bool ends_with_insensitive(StringRef Suffix) const;
-    [[nodiscard]] LLVM_DEPRECATED(
-        "Use ends_with_insensitive instead",
-        "ends_with_insensitive") bool endswith_insensitive(StringRef Suffix)
-        const {
+    [[nodiscard]] bool endswith_insensitive(StringRef Suffix) const {
       return ends_with_insensitive(Suffix);
     }
 
@@ -349,11 +343,12 @@ namespace llvm {
     /// \returns The index of the last occurrence of \p C, or npos if not
     /// found.
     [[nodiscard]] size_t rfind(char C, size_t From = npos) const {
-      size_t I = std::min(From, Length);
-      while (I) {
-        --I;
-        if (Data[I] == C)
-          return I;
+      From = std::min(From, Length);
+      size_t i = From;
+      while (i != 0) {
+        --i;
+        if (Data[i] == C)
+          return i;
       }
       return npos;
     }
@@ -454,8 +449,8 @@ namespace llvm {
     /// Return the number of occurrences of \p C in the string.
     [[nodiscard]] size_t count(char C) const {
       size_t Count = 0;
-      for (size_t I = 0; I != Length; ++I)
-        if (Data[I] == C)
+      for (size_t i = 0, e = Length; i != e; ++i)
+        if (Data[i] == C)
           ++Count;
       return Count;
     }
@@ -528,17 +523,6 @@ namespace llvm {
     /// APInt::fromString is superficially similar but assumes the
     /// string is well-formed in the given radix.
     bool getAsInteger(unsigned Radix, APInt &Result) const;
-
-    /// Parse the current string as an integer of the specified \p Radix.  If
-    /// \p Radix is specified as zero, this does radix autosensing using
-    /// extended C rules: 0 is octal, 0x is hex, 0b is binary.
-    ///
-    /// If the string does not begin with a number of the specified radix,
-    /// this returns true to signify the error. The string is considered
-    /// erroneous if empty.
-    /// The portion of the string representing the discovered numeric value
-    /// is removed from the beginning of the string.
-    bool consumeInteger(unsigned Radix, APInt &Result);
 
     /// Parse the current string as an IEEE double-precision floating
     /// point value.  The string must be a well-formed double.
@@ -640,17 +624,17 @@ namespace llvm {
       if (!starts_with(Prefix))
         return false;
 
-      *this = substr(Prefix.size());
+      *this = drop_front(Prefix.size());
       return true;
     }
 
     /// Returns true if this StringRef has the given prefix, ignoring case,
     /// and removes that prefix.
     bool consume_front_insensitive(StringRef Prefix) {
-      if (!starts_with_insensitive(Prefix))
+      if (!startswith_insensitive(Prefix))
         return false;
 
-      *this = substr(Prefix.size());
+      *this = drop_front(Prefix.size());
       return true;
     }
 
@@ -660,17 +644,17 @@ namespace llvm {
       if (!ends_with(Suffix))
         return false;
 
-      *this = substr(0, size() - Suffix.size());
+      *this = drop_back(Suffix.size());
       return true;
     }
 
     /// Returns true if this StringRef has the given suffix, ignoring case,
     /// and removes that suffix.
     bool consume_back_insensitive(StringRef Suffix) {
-      if (!ends_with_insensitive(Suffix))
+      if (!endswith_insensitive(Suffix))
         return false;
 
-      *this = substr(0, size() - Suffix.size());
+      *this = drop_back(Suffix.size());
       return true;
     }
 
@@ -687,7 +671,7 @@ namespace llvm {
     /// be returned.
     [[nodiscard]] StringRef slice(size_t Start, size_t End) const {
       Start = std::min(Start, Length);
-      End = std::clamp(End, Start, Length);
+      End = std::min(std::max(Start, End), Length);
       return StringRef(Data + Start, End - Start);
     }
 

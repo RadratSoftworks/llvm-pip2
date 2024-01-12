@@ -23,6 +23,9 @@ class StringRef;
 namespace LoongArch {
 
 enum FeatureKind : uint32_t {
+  FK_INVALID = 0,
+  FK_NONE = 1,
+
   // 64-bit ISA is available.
   FK_64BIT = 1 << 1,
 
@@ -43,9 +46,6 @@ enum FeatureKind : uint32_t {
 
   // Loongson Virtualization Extension is available.
   FK_LVZ = 1 << 7,
-
-  // Allow memory accesses to be unaligned.
-  FK_UAL = 1 << 8,
 };
 
 struct FeatureInfo {
@@ -64,14 +64,11 @@ struct ArchInfo {
   uint32_t Features;
 };
 
-bool isValidArchName(StringRef Arch);
+ArchKind parseArch(StringRef Arch);
 bool getArchFeatures(StringRef Arch, std::vector<StringRef> &Features);
-bool isValidCPUName(StringRef TuneCPU);
-void fillValidCPUList(SmallVectorImpl<StringRef> &Values);
-StringRef getDefaultArch(bool Is64Bit);
 
 } // namespace LoongArch
 
 } // namespace llvm
 
-#endif // LLVM_TARGETPARSER_LOONGARCHTARGETPARSER_H
+#endif // LLVM_SUPPORT_LOONGARCHTARGETPARSER_H

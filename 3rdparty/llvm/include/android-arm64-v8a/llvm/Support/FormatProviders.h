@@ -35,7 +35,7 @@ struct use_integral_formatter
 
 template <typename T>
 struct use_char_formatter
-    : public std::integral_constant<bool, std::is_same_v<T, char>> {};
+    : public std::integral_constant<bool, std::is_same<T, char>::value> {};
 
 template <typename T>
 struct is_cstring
@@ -46,17 +46,16 @@ struct is_cstring
 template <typename T>
 struct use_string_formatter
     : public std::integral_constant<bool,
-                                    std::is_convertible_v<T, llvm::StringRef>> {
-};
+                                    std::is_convertible<T, llvm::StringRef>::value> {};
 
 template <typename T>
 struct use_pointer_formatter
-    : public std::integral_constant<bool, std::is_pointer_v<T> &&
+    : public std::integral_constant<bool, std::is_pointer<T>::value &&
                                               !is_cstring<T>::value> {};
 
 template <typename T>
 struct use_double_formatter
-    : public std::integral_constant<bool, std::is_floating_point_v<T>> {};
+    : public std::integral_constant<bool, std::is_floating_point<T>::value> {};
 
 class HelperFunctions {
 protected:
@@ -76,7 +75,7 @@ protected:
   }
 
   static bool consumeHexStyle(StringRef &Str, HexPrintStyle &Style) {
-    if (!Str.starts_with_insensitive("x"))
+    if (!Str.startswith_insensitive("x"))
       return false;
 
     if (Str.consume_front("x-"))

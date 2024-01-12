@@ -84,7 +84,7 @@ class MachineModuleInfo {
   MCContext *ExternalContext = nullptr;
 
   /// This is the LLVM Module being worked on.
-  const Module *TheModule = nullptr;
+  const Module *TheModule;
 
   /// This is the object-file-format-specific implementation of
   /// MachineModuleInfoImpl, which lets targets accumulate whatever info they
@@ -95,7 +95,7 @@ class MachineModuleInfo {
   /// \{
 
   /// The current call site index being processed, if any. 0 if none.
-  unsigned CurCallSite = 0;
+  unsigned CurCallSite;
 
   /// \}
 
@@ -106,11 +106,11 @@ class MachineModuleInfo {
   // go into .eh_frame only, while others go into .debug_frame only.
 
   /// True if debugging information is available in this module.
-  bool DbgInfoAvailable = false;
+  bool DbgInfoAvailable;
 
   /// True if this module is being built for windows/msvc, and uses floating
   /// point.  This is used to emit an undefined reference to _fltused.
-  bool UsesMSVCFloatingPoint = false;
+  bool UsesMSVCFloatingPoint;
 
   /// Maps IR Functions to their corresponding MachineFunctions.
   DenseMap<const Function*, std::unique_ptr<MachineFunction>> MachineFunctions;

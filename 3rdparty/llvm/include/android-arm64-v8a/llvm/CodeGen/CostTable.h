@@ -16,7 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/Support/MachineValueType.h"
 
 namespace llvm {
 

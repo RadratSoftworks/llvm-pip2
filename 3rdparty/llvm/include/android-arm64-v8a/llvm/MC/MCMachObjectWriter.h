@@ -32,7 +32,7 @@ class MCMachObjectTargetWriter : public MCObjectTargetWriter {
 protected:
   uint32_t CPUSubtype;
 public:
-  unsigned LocalDifference_RIT = 0;
+  unsigned LocalDifference_RIT;
 
 protected:
   MCMachObjectTargetWriter(bool Is64Bit_, uint32_t CPUType_,

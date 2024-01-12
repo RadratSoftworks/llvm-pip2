@@ -11,10 +11,10 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 namespace llvm {
@@ -31,7 +31,6 @@ struct VecDesc {
   StringRef ScalarFnName;
   StringRef VectorFnName;
   ElementCount VectorizationFactor;
-  bool Masked;
 };
 
   enum LibFunc : unsigned {
@@ -96,8 +95,7 @@ public:
     LIBMVEC_X86,      // GLIBC Vector Math library.
     MASSV,            // IBM MASS vector library.
     SVML,             // Intel short vector math library.
-    SLEEFGNUABI, // SLEEF - SIMD Library for Evaluating Elementary Functions.
-    ArmPL        // Arm Performance Libraries.
+    SLEEFGNUABI       // SLEEF - SIMD Library for Evaluating Elementary Functions.
   };
 
   TargetLibraryInfoImpl();
@@ -140,7 +138,7 @@ public:
     if (StandardNames[F] != Name) {
       setState(F, CustomName);
       CustomNames[F] = std::string(Name);
-      assert(CustomNames.contains(F));
+      assert(CustomNames.find(F) != CustomNames.end());
     } else {
       setState(F, StandardName);
     }
@@ -163,8 +161,7 @@ public:
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.
   bool isFunctionVectorizable(StringRef F, const ElementCount &VF) const {
-    return !(getVectorizedFunction(F, VF, false).empty() &&
-             getVectorizedFunction(F, VF, true).empty());
+    return !getVectorizedFunction(F, VF).empty();
   }
 
   /// Return true if the function F has a vector equivalent with any
@@ -173,8 +170,7 @@ public:
 
   /// Return the name of the equivalent of F, vectorized with factor VF. If no
   /// such mapping exists, return the empty string.
-  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
-                                  bool Masked) const;
+  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF) const;
 
   /// Set to true iff i32 parameters to library functions should have signext
   /// or zeroext attributes if they correspond to C-level int or unsigned int,
@@ -350,9 +346,8 @@ public:
   bool isFunctionVectorizable(StringRef F) const {
     return Impl->isFunctionVectorizable(F);
   }
-  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
-                                  bool Masked = false) const {
-    return Impl->getVectorizedFunction(F, VF, Masked);
+  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF) const {
+    return Impl->getVectorizedFunction(F, VF);
   }
 
   /// Tests if the function is both available and a candidate for optimized code
@@ -379,7 +374,6 @@ public:
     case LibFunc_trunc:        case LibFunc_truncf:     case LibFunc_truncl:
     case LibFunc_log2:         case LibFunc_log2f:      case LibFunc_log2l:
     case LibFunc_exp2:         case LibFunc_exp2f:      case LibFunc_exp2l:
-    case LibFunc_ldexp:        case LibFunc_ldexpf:     case LibFunc_ldexpl:
     case LibFunc_memcpy:       case LibFunc_memset:     case LibFunc_memmove:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:

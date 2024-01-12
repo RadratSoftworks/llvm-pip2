@@ -47,14 +47,15 @@ namespace llvm {
     Function *DeclareFn;     ///< llvm.dbg.declare
     Function *ValueFn;       ///< llvm.dbg.value
     Function *LabelFn;       ///< llvm.dbg.label
+    Function *AddrFn;        ///< llvm.dbg.addr
     Function *AssignFn;      ///< llvm.dbg.assign
 
     SmallVector<TrackingMDNodeRef, 4> AllEnumTypes;
     /// Track the RetainTypes, since they can be updated later on.
     SmallVector<TrackingMDNodeRef, 4> AllRetainTypes;
-    SmallVector<DISubprogram *, 4> AllSubprograms;
+    SmallVector<Metadata *, 4> AllSubprograms;
     SmallVector<Metadata *, 4> AllGVs;
-    SmallVector<TrackingMDNodeRef, 4> ImportedModules;
+    SmallVector<TrackingMDNodeRef, 4> AllImportedModules;
     /// Map Macro parent (which can be DIMacroFile or nullptr) to a list of
     /// Metadata all of type DIMacroNode.
     /// DIMacroNode's with nullptr parent are DICompileUnit direct children.
@@ -64,25 +65,15 @@ namespace llvm {
     SmallVector<TrackingMDNodeRef, 4> UnresolvedNodes;
     bool AllowUnresolvedNodes;
 
-    /// Each subprogram's preserved local variables, labels and imported
-    /// entities.
+    /// Each subprogram's preserved local variables.
     ///
     /// Do not use a std::vector.  Some versions of libc++ apparently copy
     /// instead of move on grow operations, and TrackingMDRef is expensive to
     /// copy.
-    DenseMap<DISubprogram *, SmallVector<TrackingMDNodeRef, 4>>
-        SubprogramTrackedNodes;
+    DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> PreservedVariables;
 
-    SmallVectorImpl<TrackingMDNodeRef> &
-    getImportTrackingVector(const DIScope *S) {
-      return isa_and_nonnull<DILocalScope>(S)
-                 ? getSubprogramNodesTrackingVector(S)
-                 : ImportedModules;
-    }
-    SmallVectorImpl<TrackingMDNodeRef> &
-    getSubprogramNodesTrackingVector(const DIScope *S) {
-      return SubprogramTrackedNodes[cast<DILocalScope>(S)->getSubprogram()];
-    }
+    /// Each subprogram's preserved labels.
+    DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> PreservedLabels;
 
     /// Create a temporary.
     ///
@@ -110,6 +101,12 @@ namespace llvm {
     insertDbgValueIntrinsic(llvm::Value *Val, DILocalVariable *VarInfo,
                             DIExpression *Expr, const DILocation *DL,
                             BasicBlock *InsertBB, Instruction *InsertBefore);
+
+    /// Internal helper for insertDbgAddrIntrinsic.
+    Instruction *
+    insertDbgAddrIntrinsic(llvm::Value *Val, DILocalVariable *VarInfo,
+                           DIExpression *Expr, const DILocation *DL,
+                           BasicBlock *InsertBB, Instruction *InsertBefore);
 
   public:
     /// Construct a builder for a module.
@@ -988,6 +985,30 @@ namespace llvm {
                                          DIExpression *Expr,
                                          const DILocation *DL,
                                          Instruction *InsertBefore);
+
+    /// Insert a new llvm.dbg.addr intrinsic call.
+    /// \param Addr          llvm::Value of the address
+    /// \param VarInfo      Variable's debug info descriptor.
+    /// \param Expr         A complex location expression.
+    /// \param DL           Debug info location.
+    /// \param InsertAtEnd Location for the new intrinsic.
+    Instruction *insertDbgAddrIntrinsic(llvm::Value *Addr,
+                                        DILocalVariable *VarInfo,
+                                        DIExpression *Expr,
+                                        const DILocation *DL,
+                                        BasicBlock *InsertAtEnd);
+
+    /// Insert a new llvm.dbg.addr intrinsic call.
+    /// \param Addr         llvm::Value of the address.
+    /// \param VarInfo      Variable's debug info descriptor.
+    /// \param Expr         A complex location expression.
+    /// \param DL           Debug info location.
+    /// \param InsertBefore Location for the new intrinsic.
+    Instruction *insertDbgAddrIntrinsic(llvm::Value *Addr,
+                                        DILocalVariable *VarInfo,
+                                        DIExpression *Expr,
+                                        const DILocation *DL,
+                                        Instruction *InsertBefore);
 
     /// Replace the vtable holder in the given type.
     ///

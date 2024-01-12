@@ -24,8 +24,8 @@ namespace llvm {
 namespace memprof {
 
 /// Return the allocation type for a given set of memory profile values.
-AllocationType getAllocType(uint64_t TotalLifetimeAccessDensity,
-                            uint64_t AllocCount, uint64_t TotalLifetime);
+AllocationType getAllocType(uint64_t MaxAccessCount, uint64_t MinSize,
+                            uint64_t MinLifetime);
 
 /// Build callstack metadata from the provided list of call stack ids. Returns
 /// the resulting metadata node.
@@ -36,12 +36,6 @@ MDNode *getMIBStackNode(const MDNode *MIB);
 
 /// Returns the allocation type from an MIB metadata node.
 AllocationType getMIBAllocType(const MDNode *MIB);
-
-/// Returns the string to use in attributes with the given type.
-std::string getAllocTypeAttributeString(AllocationType Type);
-
-/// True if the AllocTypes bitmask contains just a single type.
-bool hasSingleAllocType(uint8_t AllocTypes);
 
 /// Class to build a trie of call stack contexts for a particular profiled
 /// allocation call, along with their associated allocation types.
@@ -61,9 +55,9 @@ private:
   };
 
   // The node for the allocation at the root.
-  CallStackTrieNode *Alloc = nullptr;
+  CallStackTrieNode *Alloc;
   // The allocation's leaf stack id.
-  uint64_t AllocStackId = 0;
+  uint64_t AllocStackId;
 
   void deleteTrieNode(CallStackTrieNode *Node) {
     if (!Node)
@@ -80,7 +74,7 @@ private:
                      bool CalleeHasAmbiguousCallerContext);
 
 public:
-  CallStackTrie() = default;
+  CallStackTrie() : Alloc(nullptr), AllocStackId(0) {}
   ~CallStackTrie() { deleteTrieNode(Alloc); }
 
   bool empty() const { return Alloc == nullptr; }
@@ -134,7 +128,6 @@ public:
   CallStackIterator begin() const;
   CallStackIterator end() const { return CallStackIterator(N, /*End*/ true); }
   CallStackIterator beginAfterSharedPrefix(CallStack &Other);
-  uint64_t back() const;
 
 private:
   const NodeT *N = nullptr;
@@ -144,10 +137,8 @@ template <class NodeT, class IteratorT>
 CallStack<NodeT, IteratorT>::CallStackIterator::CallStackIterator(
     const NodeT *N, bool End)
     : N(N) {
-  if (!N) {
-    Iter = nullptr;
+  if (!N)
     return;
-  }
   Iter = End ? N->StackIdIndices.end() : N->StackIdIndices.begin();
 }
 
@@ -155,12 +146,6 @@ template <class NodeT, class IteratorT>
 uint64_t CallStack<NodeT, IteratorT>::CallStackIterator::operator*() {
   assert(Iter != N->StackIdIndices.end());
   return *Iter;
-}
-
-template <class NodeT, class IteratorT>
-uint64_t CallStack<NodeT, IteratorT>::back() const {
-  assert(N);
-  return N->StackIdIndices.back();
 }
 
 template <class NodeT, class IteratorT>
@@ -185,7 +170,6 @@ CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::CallStackIterator(
     const MDNode *N, bool End);
 template <>
 uint64_t CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*();
-template <> uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const;
 
 } // end namespace memprof
 } // end namespace llvm
