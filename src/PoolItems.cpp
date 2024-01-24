@@ -50,6 +50,23 @@ namespace Pip2
        return (pool_items_[index - 1] & 0x80000001'00000000) == 0x80000001'00000000;
    }
 
+   bool PoolItems::is_pool_item_special_function(const std::size_t index, SpecialPoolFunction &function) const {
+       if (index > pool_item_count_ || index == 0)
+       {
+           return false;
+       }
+
+       if ((pool_items_[index - 1] & 0x80000002'00000000) == 0x80000002'00000000)
+       {
+           function = static_cast<SpecialPoolFunction>(pool_items_[index - 1] & 0x00000000'FFFFFFFF);
+           return true;
+       }
+       else
+       {
+           return false;
+       }
+   }
+
    std::uint32_t PoolItems::get_pool_item_constant(const std::size_t index) const
    {
       if (!is_pool_item_constant(index))

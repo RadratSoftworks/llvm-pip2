@@ -28,7 +28,14 @@ add_library(llvm-pip2 SHARED
         LinkerFix.cpp
         CInterface.cpp
         VMConfigParameters.h
+        TaskHandler.cpp
+        TaskHandler.h
+        SpecialFunction.cpp
+        SpecialFunction.h
 )
 
 target_include_directories(llvm-pip2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(llvm-pip2 PRIVATE llvm nlohmann_json::nlohmann_json)
+target_link_libraries(llvm-pip2 PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(llvm-pip2 PUBLIC llvm libco)
+
+target_link_options(llvm-pip2 PRIVATE "LINKER:--export-all-symbols")

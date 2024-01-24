@@ -11,6 +11,7 @@
 #include "VMConfigParameters.h"
 #include "VMConfig.h"
 #include "VMOptions.h"
+#include "TaskHandler.h"
 
 namespace Pip2 {
     struct VMConfig;
@@ -28,10 +29,9 @@ namespace Pip2 {
 
         std::unique_ptr<ObjectCache> object_cache_;
         std::unique_ptr<llvm::ExecutionEngine> execution_engine_;
-        std::unique_ptr<std::thread> execution_thread_;
+        std::unique_ptr<TaskHandler> task_handler_;
 
         std::vector<void*> runtime_function_lookup_;
-        VMContext context_{};
 
         VMConfig config_;
         VMOptions options_;
@@ -39,24 +39,35 @@ namespace Pip2 {
         std::string module_name_;
         RuntimeFunction found_runtime_function_{};
 
+        HleHandler active_handler_{};
+        void *active_handler_userdata_{};
+
         static void initialize_mcjit();
 
     private:
         void initialize_execution_engine();
         void load_and_compile_module();
+        void prepare_runtime_function();
+
+        void run_task(TaskData &task_data);
 
     public:
         static void default_optimize(llvm::Module &module);
 
         explicit VMEngine(std::string module_name, const VMConfigParameters &config, VMOptions &&options);
-        virtual ~VMEngine() = default;
+        ~VMEngine();
 
         virtual void execute(HleHandler handler = nullptr, void *userdata = nullptr);
+        virtual void execute_task_aware(HleHandler handler = nullptr, void *userdata = nullptr);
 
         virtual std::uint32_t reg(Register reg) const;
         virtual void reg(Register reg, std::uint32_t value);
 
-        [[nodiscard]] VMContext &context() { return context_; }
-        [[nodiscard]] const VMContext &context() const { return context_; }
+        [[nodiscard]] VMContext &context() { return task_handler_->current_task_context(); }
+        [[nodiscard]] const VMContext &context() const { return task_handler_->current_task_context(); }
+
+        TaskHandler *task_handler() { return task_handler_.get(); }
     };
+
+    extern thread_local VMEngine *engine_instance;
 }

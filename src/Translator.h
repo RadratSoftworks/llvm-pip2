@@ -54,6 +54,12 @@ namespace Pip2
         llvm::FunctionCallee current_hle_handler_callee_;
         llvm::Function *current_function_;
 
+        std::array<llvm::FunctionType*, 5> std_call_type_;
+        std::array<llvm::FunctionType*, 5> std_call_type_with_return_;
+
+        std::map<SpecialPoolFunction, llvm::Function *> special_functions_;
+        llvm::FunctionType *wrapper_function_type_;
+
         std::uint32_t current_addr_;
         const Function *current_function_analysis_;
 
@@ -80,6 +86,8 @@ namespace Pip2
 
         std::uint32_t fetch_immediate();
         llvm::Type *get_pointer_integer_type();
+
+        void call_special_function(SpecialPoolFunction function);
 
     private:
         void create_compare_two_registers_branch(Instruction instruction, llvm::CmpInst::Predicate predicate,
@@ -207,6 +215,7 @@ namespace Pip2
         void SYSSET(Instruction instruction);
 
         void SLEEP(Instruction instruction);
+        void KILLTASK(Instruction instruction);
 
     private:
         InstructionTranslator instruction_translators_[Opcode::TotalOpcodes] = {
@@ -224,7 +233,7 @@ namespace Pip2
             &Translator::BNEIB, &Translator::BGEIB, &Translator::BGEUIB, &Translator::BGTIB, &Translator::BGTUIB, // 0x37
             &Translator::BLEIB, &Translator::BLEUIB, &Translator::BLTIB, &Translator::BLTUIB, &Translator::LDQ,            // 0x3C
             &Translator::JPr, &Translator::CALLr, &Translator::STORE, &Translator::RESTORE, &Translator::RET,                                                          // 0x41
-            nullptr, &Translator::SLEEP, &Translator::SYSCPY, &Translator::SYSSET, &Translator::ADDi,                                                // 0x46
+            &Translator::KILLTASK, &Translator::SLEEP, &Translator::SYSCPY, &Translator::SYSSET, &Translator::ADDi,                                                // 0x46
             &Translator::ANDi, &Translator::MULi, &Translator::DIVi, &Translator::DIVUi, &Translator::ORi,                                                          // 0x4B
             &Translator::XORi, &Translator::SUBi, &Translator::STBd, &Translator::STHd, &Translator::STWd,                                                // 0x50
             &Translator::LDBd, &Translator::LDHd, &Translator::LDWd, &Translator::LDBUd, &Translator::LDHUd,                                                          // 0x55

@@ -188,8 +188,13 @@ namespace Pip2 {
                 });
             } else {
                 update_pc_to_next_instruction();
+                SpecialPoolFunction special_pool_function;
 
-                builder_.CreateCall(current_hle_handler_callee_, { current_hle_handler_userdata_, builder_.getInt32(next_word) });
+                if (config_.pool_items().is_pool_item_special_function(next_word, special_pool_function)) {
+                    call_special_function(special_pool_function);
+                } else {
+                    builder_.CreateCall(current_hle_handler_callee_, { current_hle_handler_userdata_, builder_.getInt32(next_word) });
+                }
 
                 if (config_.pool_items().is_pool_item_terminate_function(next_word))
                 {

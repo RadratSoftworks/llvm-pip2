@@ -33,6 +33,11 @@ namespace Pip2
 
     void Translator::SLEEP(Instruction instruction)
     {
-        // For now do nothing
+        call_special_function(SpecialPoolFunction::YIELD_TASK);
+    }
+
+    void Translator::KILLTASK(Instruction instruction)
+    {
+        call_special_function(SpecialPoolFunction::KILL_CURRENT_TASK);
     }
 }

@@ -2,6 +2,7 @@
 #include "Register.h"
 #include "Common.h"
 #include "Constants.h"
+#include "SpecialFunction.h"
 
 #include <format>
 #include <iostream>
@@ -319,6 +320,78 @@ namespace Pip2 {
                 i8_type_->getPointerTo(),
                 i32_type_
             }, false);
+
+        for (auto i = 0; i < std_call_type_.size(); i++)
+        {
+            std::vector<llvm::Type*> std_call_type_args(i, i32_type_);
+            std_call_type_[i] = llvm::FunctionType::get(void_type_, { std_call_type_args.data(), std_call_type_args.size() }, false);
+        }
+
+        for (auto i = 0; i < std_call_type_with_return_.size(); i++)
+        {
+            std::vector<llvm::Type*> std_call_type_args(i, i32_type_);
+            std_call_type_with_return_[i] = llvm::FunctionType::get(i32_type_, { std_call_type_args.data(), std_call_type_args.size() }, false);
+        }
+
+        wrapper_function_type_ = llvm::FunctionType::get(void_type_, {
+            context_type_->getPointerTo()
+        }, false);
+    }
+
+    void Translator::call_special_function(SpecialPoolFunction function)
+    {
+        if (special_functions_.find(function) == special_functions_.end()) {
+            auto special_function_info = SPECIAL_POOL_FUNCTION_INFOS.find(function);
+            if (special_function_info == SPECIAL_POOL_FUNCTION_INFOS.end()) {
+                throw std::runtime_error("Invalid special function");
+            }
+
+            auto module = current_function_->getParent();
+            auto function_type = special_function_info->second.has_return_value_ ?
+                    std_call_type_with_return_[special_function_info->second.arg_count_] :
+                    std_call_type_[special_function_info->second.arg_count_];
+
+            auto external_function = module->getOrInsertFunction(special_function_info->second.name_, function_type);
+            auto function_wrapper = llvm::Function::Create(wrapper_function_type_, llvm::GlobalValue::ExternalLinkage,
+                                                           special_function_info->second.name_ + "_wrapper", module);
+
+            auto function_wrapper_block = llvm::BasicBlock::Create(context_, "entry", function_wrapper);
+
+            auto previous_insert_point = builder_.GetInsertBlock();
+            builder_.SetInsertPoint(function_wrapper_block);
+
+            auto context_arg = function_wrapper->getArg(0);
+            std::vector<llvm::Value*> function_args;
+
+            for (auto i = 0; i < special_function_info->second.arg_count_; i++)
+            {
+                auto arg_value = builder_.CreateLoad(i32_type_, builder_.CreateGEP(
+                        context_type_,
+                        context_arg,
+                        { builder_.getInt32(0), builder_.getInt32((Register::P0 >> 2) + i) }));
+
+                function_args.push_back(arg_value);
+            }
+
+            auto ret_value = builder_.CreateCall(external_function, function_args);
+
+            if (special_function_info->second.has_return_value_)
+            {
+                builder_.CreateStore(ret_value, builder_.CreateGEP(
+                        context_type_,
+                        context_arg,
+                        { builder_.getInt32(0), builder_.getInt32(Register::R0 >> 2) }));
+            }
+
+            builder_.CreateRetVoid();
+            builder_.SetInsertPoint(previous_insert_point);
+
+            special_functions_.emplace(function, function_wrapper);
+        }
+
+        builder_.CreateCall(special_functions_[function], {
+            current_context_
+        });
     }
 
     Translator::Translator(llvm::LLVMContext &context, const VMConfig &config, const VMOptions &options)

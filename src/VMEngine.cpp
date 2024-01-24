@@ -3,6 +3,7 @@
 #include "VMConfig.h"
 #include "ProgramAnalysis.h"
 #include "Translator.h"
+#include "SpecialFunction.h"
 
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Object/ObjectFile.h>
@@ -15,12 +16,12 @@
 
 namespace Pip2 {
     bool VMEngine::s_mcjit_initialized_ = false;
+    thread_local VMEngine *engine_instance = nullptr;
 
     VMEngine::VMEngine(std::string module_name, const VMConfigParameters &config, VMOptions &&options)
         : module_name_(std::move(module_name))
         , config_(config.memory_base_, static_cast<std::size_t>(config.memory_size_), config.pool_items_base_, static_cast<std::size_t>(config.pool_item_count_))
         , options_(options)
-        , context_()
         , found_runtime_function_(nullptr) {
         initialize_mcjit();
 
@@ -29,8 +30,16 @@ namespace Pip2 {
             object_cache_ = std::make_unique<ObjectCache>(options_.cache_root_path_ ? options_.cache_root_path_ : "");
         }
 
+        task_handler_ = std::make_unique<TaskHandler>(std::bind(&VMEngine::run_task, this, std::placeholders::_1),
+                                                      config.stack_create_func_, config.stack_free_func_);
+
         initialize_execution_engine();
         load_and_compile_module();
+    }
+
+    VMEngine::~VMEngine() {
+        execution_engine_.reset();
+        object_cache_.reset();
     }
 
     void VMEngine::initialize_execution_engine() {
@@ -79,6 +88,10 @@ namespace Pip2 {
     }
 
     void VMEngine::load_and_compile_module() {
+        for (const auto &[op, func_info] : SPECIAL_POOL_FUNCTION_INFOS) {
+            execution_engine_->addGlobalMapping(func_info.name_, reinterpret_cast<std::uint64_t>(func_info.func_ptr_));
+        }
+
         if (options_.cache_) {
             if (object_cache_->does_cache_exist(module_name_))
             {
@@ -127,7 +140,7 @@ namespace Pip2 {
         }
     }
 
-    void VMEngine::execute(HleHandler hle_handler, void *userdata) {
+    void VMEngine::prepare_runtime_function() {
         if (!found_runtime_function_) {
             static constexpr std::size_t TOTAL_LOOKUP_STORAGE = 0x100000;
 
@@ -138,8 +151,40 @@ namespace Pip2 {
 
             std::fill(runtime_function_lookup_.begin(), runtime_function_lookup_.end(), reinterpret_cast<void*>(&unimplemented_func_handler));
         }
+    }
 
-        found_runtime_function_(context_, reinterpret_cast<std::uint32_t*>(config_.memory_base()), runtime_function_lookup_.data(), hle_handler, userdata);
+    void VMEngine::execute(HleHandler hle_handler, void *userdata) {
+        prepare_runtime_function();
+        found_runtime_function_(context(), reinterpret_cast<std::uint32_t*>(config_.memory_base()), runtime_function_lookup_.data(), hle_handler, userdata);
+    }
+
+    void VMEngine::run_task(TaskData &task_data) {
+        RuntimeFunction func = nullptr;
+
+        if (task_data.id_ == ENTRY_POINT_TASK) {
+            func = found_runtime_function_;
+        } else {
+            auto func_ptr = runtime_function_lookup_[task_data.entry_point_ >> 2];
+            if (func_ptr == nullptr) {
+                throw std::runtime_error(std::format("Invalid task function address! Address=0x{:08X}", task_data.entry_point_));
+            }
+
+            func = reinterpret_cast<RuntimeFunction>(func_ptr);
+        }
+
+        func(task_data.context_, reinterpret_cast<std::uint32_t*>(config_.memory_base()), runtime_function_lookup_.data(),
+             active_handler_, active_handler_userdata_);
+    }
+
+    void VMEngine::execute_task_aware(HleHandler hle_handler, void *userdata) {
+        prepare_runtime_function();
+
+        active_handler_ = hle_handler;
+        active_handler_userdata_ = userdata;
+
+        engine_instance = this;
+
+        task_handler_->run_entry_point_task();
     }
 
     std::uint32_t VMEngine::reg(Register reg) const {
@@ -147,7 +192,7 @@ namespace Pip2 {
             throw std::runtime_error("Invalid register");
         }
 
-        return context_.regs_[reg >> 2];
+        return context().regs_[reg >> 2];
     }
 
     void VMEngine::reg(Register reg, std::uint32_t value) {
@@ -155,6 +200,6 @@ namespace Pip2 {
             throw std::runtime_error("Invalid register");
         }
 
-        context_.regs_[reg >> 2] = value;
+        context().regs_[reg >> 2] = value;
     }
 }
