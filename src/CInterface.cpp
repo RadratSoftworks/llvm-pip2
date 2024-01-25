@@ -14,7 +14,7 @@ extern "C" {
     }
 
     PIP2_API void vm_engine_execute(VMEngine *engine, HleHandler handler, void *handler_user_data) {
-        engine->execute_task_aware(handler, handler_user_data);
+        engine->execute(handler, handler_user_data);
     }
 
     PIP2_API std::uint32_t vm_engine_reg(VMEngine *engine, Pip2::Register reg) {

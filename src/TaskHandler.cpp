@@ -119,11 +119,19 @@ namespace Pip2 {
     }
 
     void TaskHandler::yield_current() {
+        if (tasks_.empty()) {
+            return;
+        }
+
         schedule_task(tasks_[current_task_id_ - 1].get());
         switch_to_next_task();
     }
 
     void TaskHandler::kill_current() {
+        if (tasks_.empty()) {
+            return;
+        }
+        
         dispose_task(current_task_id_);
         switch_to_next_task();
     }
