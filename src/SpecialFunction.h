@@ -10,7 +10,7 @@ namespace Pip2 {
     int task_receive();
     int task_receive_any(int task_id);
     void task_send(int task_id, int message);
-    void task_set_stack_size(std::uint32_t stack_size);
+    std::uint32_t task_set_stack_size(std::uint32_t stack_size);
     int task_alive(int task_id);
     int task_this();
     void task_yield();

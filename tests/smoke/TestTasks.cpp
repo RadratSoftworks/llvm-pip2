@@ -110,7 +110,7 @@ void hle_handler(void *userdata, int num) {
  * @param size The size of the new stack. If the size is negative, the default stack size will be used.
  * @return The stack top address
  */
-std::uint32_t allocate_stack(std::int64_t size) {
+std::uint32_t allocate_stack(void*, std::int64_t size) {
     if (size < 0) {
         size = DEFAULT_STACK_SIZE;
     }
@@ -155,7 +155,8 @@ int main(int argc, const char** argv) {
 
     Pip2::VMOptions options {
             .divide_by_zero_result_zero = true,
-            .cache_ = false,
+            .cache_ = true,
+            .cache_root_path_ = "G:\\",
             .text_base_ = start_offset,
             .entry_point_ = 0
     };
@@ -163,7 +164,7 @@ int main(int argc, const char** argv) {
     Pip2::VMEngine engine("tasks", config, std::move(options));
     current_engine = &engine;
 
-    engine.context().regs_[Pip2::Register::SP >> 2] = allocate_stack(-1);
+    engine.context().regs_[Pip2::Register::SP >> 2] = allocate_stack(nullptr, -1);
 
     start_time = std::chrono::steady_clock::now();
     previous_swap_time = start_time;

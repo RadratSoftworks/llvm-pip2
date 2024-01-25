@@ -1,5 +1,6 @@
 #include "TaskHandler.h"
 #include "VMEngine.h"
+#include <fstream>
 
 namespace Pip2 {
     static constexpr std::size_t HOST_STACK_SIZE = 0x100000;
@@ -9,13 +10,14 @@ namespace Pip2 {
         task_handler->execute_entry_point_current_task();
     }
 
-    TaskHandler::TaskHandler(TaskExecuteEntryFunc execute_entry_func, Common::TaskStackCreateFunc stack_create_func,
+    TaskHandler::TaskHandler(VMEngine *engine, TaskExecuteEntryFunc execute_entry_func, Common::TaskStackCreateFunc stack_create_func,
                              Common::TaskStackFreeFunc stack_free_func)
         : stack_create_func_(stack_create_func)
         , stack_free_func_(stack_free_func)
         , execute_entry_func_(execute_entry_func)
         , stack_size_(-1)
-        , current_task_id_(-1) {
+        , current_task_id_(-1)
+        , engine_(engine) {
     }
 
     void TaskHandler::execute_entry_point_current_task() {
@@ -47,7 +49,7 @@ namespace Pip2 {
         task_data->context_.regs_[Register::P2 >> 2] = p2;
 
         // Create stack
-        task_data->stack_addr_ = stack_create_func_ ? stack_create_func_(stack_size_) : 0;
+        task_data->stack_addr_ = stack_create_func_ ? stack_create_func_(engine_->userdata(), stack_size_) : 0;
         task_data->context_.regs_[Register::SP >> 2] = task_data->stack_addr_;
         task_data->handle_ = co_create(HOST_STACK_SIZE, task_execute_entry_point);
         task_data->entry_point_ = func_addr;
@@ -80,7 +82,7 @@ namespace Pip2 {
 
         TaskData *task_data_ptr = tasks_[task_id - 1].get();
         if (task_data_ptr->stack_addr_ != 0 && stack_free_func_) {
-            stack_free_func_(task_data_ptr->stack_addr_);
+            stack_free_func_(engine_->userdata(), task_data_ptr->stack_addr_);
         }
 
         tasks_[task_id - 1] = nullptr;

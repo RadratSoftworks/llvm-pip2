@@ -27,9 +27,9 @@ namespace Pip2 {
         task_handler->send(task_id, message);
     }
 
-    void task_set_stack_size(std::uint32_t stack_size) {
+    std::uint32_t task_set_stack_size(std::uint32_t stack_size) {
         auto task_handler = engine_instance->task_handler();
-        task_handler->set_stack_size(stack_size);
+        return task_handler->set_stack_size(stack_size);
     }
 
     int task_alive(int task_id) {
@@ -58,7 +58,7 @@ namespace Pip2 {
             { SpecialPoolFunction::RECEIVE, { "task_receive", 0, true, reinterpret_cast<void*>(&task_receive) } },
             { SpecialPoolFunction::RECEIVE_ANY, { "task_receive_any", 1, true, reinterpret_cast<void*>(&task_receive_any) } },
             { SpecialPoolFunction::SEND, { "task_send", 2, false, reinterpret_cast<void*>(&task_send) } },
-            { SpecialPoolFunction::SET_STACK_SIZE, { "task_set_stack_size", 1, false, reinterpret_cast<void*>(&task_set_stack_size) } },
+            { SpecialPoolFunction::SET_STACK_SIZE, { "task_set_stack_size", 1, true, reinterpret_cast<void*>(&task_set_stack_size) } },
             { SpecialPoolFunction::TASK_ALIVE, { "task_alive", 1, true, reinterpret_cast<void*>(&task_alive) } },
             { SpecialPoolFunction::THIS_TASK, { "task_this", 0, true, reinterpret_cast<void*>(&task_this) } },
             { SpecialPoolFunction::YIELD_TASK, { "task_yield", 0, false, reinterpret_cast<void*>(&task_yield) } },

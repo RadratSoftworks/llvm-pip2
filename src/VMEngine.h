@@ -67,6 +67,7 @@ namespace Pip2 {
         [[nodiscard]] const VMContext &context() const { return task_handler_->current_task_context(); }
 
         TaskHandler *task_handler() { return task_handler_.get(); }
+        void *userdata() { return active_handler_userdata_; }
     };
 
     extern thread_local VMEngine *engine_instance;

@@ -30,7 +30,7 @@ namespace Pip2 {
             object_cache_ = std::make_unique<ObjectCache>(options_.cache_root_path_ ? options_.cache_root_path_ : "");
         }
 
-        task_handler_ = std::make_unique<TaskHandler>(std::bind(&VMEngine::run_task, this, std::placeholders::_1),
+        task_handler_ = std::make_unique<TaskHandler>(this, std::bind(&VMEngine::run_task, this, std::placeholders::_1),
                                                       config.stack_create_func_, config.stack_free_func_);
 
         initialize_execution_engine();

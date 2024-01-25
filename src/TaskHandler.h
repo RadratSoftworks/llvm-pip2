@@ -19,6 +19,8 @@ namespace Pip2 {
     static constexpr int TASK_CURRENT = -1;
     static constexpr int ENTRY_POINT_TASK = 1;
 
+    class VMEngine;
+
     struct TaskData {
         cothread_t handle_;
         std::uint32_t entry_point_;
@@ -46,6 +48,7 @@ namespace Pip2 {
         int current_task_id_;
 
         cothread_t main_handle_;
+        VMEngine *engine_;
 
     private:
         int push_task(std::unique_ptr<TaskData> &task_data);
@@ -57,7 +60,7 @@ namespace Pip2 {
         void switch_to_next_task();
 
     public:
-        explicit TaskHandler(TaskExecuteEntryFunc execute_entry_func, Common::TaskStackCreateFunc stack_create_func,
+        explicit TaskHandler(VMEngine *engine, TaskExecuteEntryFunc execute_entry_func, Common::TaskStackCreateFunc stack_create_func,
                              Common::TaskStackFreeFunc stack_free_func);
 
         ~TaskHandler() = default;
@@ -70,8 +73,9 @@ namespace Pip2 {
         int receive(int from_task = TASK_CURRENT);
         void send(int to_task, int data);
 
-        void set_stack_size(const std::uint32_t stack_size) {
-            stack_size_ = static_cast<std::int64_t>(stack_size);
+        std::uint32_t set_stack_size(const std::uint32_t stack_size) {
+            stack_size_ = static_cast<std::int64_t>(stack_size + (((stack_size_ & 3) != 0) ? (4 - (stack_size_ & 3)) : 0));
+            return stack_size_;
         }
 
         [[nodiscard]] int task_valid(int task_id) const;
