@@ -39,4 +39,6 @@ target_include_directories(llvm-pip2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(llvm-pip2 PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(llvm-pip2 PUBLIC llvm libco)
 
-target_link_options(llvm-pip2 PRIVATE "LINKER:--export-all-symbols")
+if (WIN32)
+  target_link_options(llvm-pip2 PRIVATE "LINKER:--export-all-symbols")
+endif()
