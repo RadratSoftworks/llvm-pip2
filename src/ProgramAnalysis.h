@@ -24,7 +24,7 @@ namespace Pip2
 
         const PoolItems &pool_items_;
 
-        Function sweep_function(std::uint32_t addr);
+        Function sweep_function(std::uint32_t addr, bool &does_function_use_task_inst, bool &does_function_call_task);
         void add_to_function_analyse_queue(std::uint32_t addr);
 
     public:
@@ -34,6 +34,6 @@ namespace Pip2
         {
         }
 
-        std::vector<Function> analyze(std::uint32_t entry_point_addr);
+        std::vector<Function> analyze(std::uint32_t entry_point_addr, bool &does_program_use_task);
     };
 }

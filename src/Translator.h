@@ -68,6 +68,8 @@ namespace Pip2
         std::map<std::uint32_t, llvm::Function *> functions_;
         std::map<std::uint32_t, JumpTableTranslateState> current_function_jump_table_translate_state_;
 
+        bool use_task_;
+
     private:
         void initialize_types();
 
@@ -245,6 +247,7 @@ namespace Pip2
     public:
         explicit Translator(llvm::LLVMContext &context, const VMConfig &config, const VMOptions &options);
 
-        std::unique_ptr<llvm::Module> translate(const std::string &module_name, const std::vector<Function> &functions);
+        std::unique_ptr<llvm::Module> translate(const std::string &module_name, const std::vector<Function> &functions,
+                                                bool use_task = false);
     };
 }

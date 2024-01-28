@@ -6,6 +6,7 @@
 
 #include <thread>
 
+#include "Callback.h"
 #include "ObjectCache.h"
 #include "VMContext.h"
 #include "VMConfigParameters.h"
@@ -16,10 +17,6 @@
 namespace Pip2 {
     struct VMConfig;
     struct VMOptions;
-
-    typedef void (*HleHandler)(void *userdata, int hleFunctionCode);
-    typedef void (*RuntimeFunction)(VMContext &context, std::uint32_t *memory_base, void **runtime_function_lookup,
-                                    HleHandler hle_handler, void *userdata);
 
     class VMEngine {
     private:
@@ -38,9 +35,8 @@ namespace Pip2 {
 
         std::string module_name_;
         RuntimeFunction found_runtime_function_{};
-
-        HleHandler active_handler_{};
         void *active_handler_userdata_{};
+        bool module_use_task_;
 
         static void initialize_mcjit();
 
@@ -49,7 +45,7 @@ namespace Pip2 {
         void load_and_compile_module();
         void prepare_runtime_function();
 
-        void run_task(TaskData &task_data);
+        void run_task(TaskData &task_data, HleHandler hle_handler);
 
     public:
         static void default_optimize(llvm::Module &module);

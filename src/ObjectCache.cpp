@@ -27,7 +27,7 @@ namespace Pip2 {
         return cache_root_path_ / std::filesystem::path(module_name).replace_extension(".obj.meta");
     }
 
-    std::unique_ptr<llvm::MemoryBuffer> ObjectCache::load(const std::string &module_name) {
+    std::unique_ptr<llvm::MemoryBuffer> ObjectCache::load(const std::string &module_name, bool *does_module_use_task) {
         auto cache_meta_path = get_cache_meta_path(module_name);
         if (!std::filesystem::exists(cache_meta_path)) {
             return nullptr;
@@ -39,6 +39,9 @@ namespace Pip2 {
             if (meta_file["version"] != Pip2::CACHE_VERSION) {
                 // Force recompile
                 return nullptr;
+            }
+            if (does_module_use_task != nullptr) {
+                *does_module_use_task = meta_file.value<bool>("use_task", false);
             }
         } catch (std::exception &ex) {
         }
@@ -61,7 +64,8 @@ namespace Pip2 {
     }
 
     void ObjectCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef Obj) {
-        std::string cache_path = get_cache_path(M->getName().str()).string();
+        std::string module_name = M->getName().str();
+        std::string cache_path = get_cache_path(module_name).string();
         std::error_code ec;
         llvm::raw_fd_ostream os(cache_path, ec, llvm::sys::fs::OF_None);
         os.write(Obj.getBufferStart(), Obj.getBufferSize());
@@ -71,11 +75,21 @@ namespace Pip2 {
             std::ofstream meta_file_stream(cache_meta_path);
             json meta_file;
             meta_file["version"] = Pip2::CACHE_VERSION;
+            meta_file["use_task"] =
+                    (use_task_modules_.find(module_name) != use_task_modules_.end()) && use_task_modules_[module_name];
             meta_file_stream << meta_file.dump(4);
         }
     }
 
     std::unique_ptr<llvm::MemoryBuffer> ObjectCache::getObject(const llvm::Module *M) {
         return load(M->getName().str());
+    }
+
+    void ObjectCache::mark_module_use_task(const std::string &module_name, bool use_task) {
+        if (use_task_modules_.find(module_name) != use_task_modules_.end()) {
+            use_task_modules_[module_name] = use_task;
+        } else {
+            use_task_modules_.emplace(module_name, use_task);
+        }
     }
 }

@@ -233,7 +233,7 @@ namespace Pip2
         }
     }
 
-    Function ProgramAnalysis::sweep_function(std::uint32_t addr)
+    Function ProgramAnalysis::sweep_function(std::uint32_t addr, bool &does_function_use_task_inst, bool &does_function_call_task)
     {
         Function result_function;
         result_function.addr_ = addr;
@@ -301,6 +301,10 @@ namespace Pip2
             const auto opcode = memory_base_[addr >> 2];
             const Instruction instruction{opcode};
 
+            if (opcode == Opcode::SLEEP || opcode == Opcode::KILLTASK) {
+                does_function_use_task_inst = true;
+            }
+
             // Direct branch, we can follow it!
             if (is_direct_branch(instruction))
             {
@@ -330,9 +334,16 @@ namespace Pip2
                     // If jump target is undefined, there are two possibilities:
                     // 1. It's a HLE call (call to Mophun's library), in that case it's fine
                     // 2. Failed to calculate jump target, in that case we should throw an exception
-                    if (!jump_target.has_value() && (instruction.word_encoding.opcode != Opcode::CALLl))
+                    if (!jump_target.has_value())
                     {
-                        throw std::runtime_error("Failed to calculate jump target");
+                        if (instruction.word_encoding.opcode == Opcode::CALLl) {
+                            SpecialPoolFunction special_function;
+                            if (pool_items_.is_pool_item_special_function(memory_base_[addr >> 2], special_function)) {
+                                does_function_call_task = true;
+                            }
+                        } else {
+                            throw std::runtime_error("Failed to calculate jump target");
+                        }
                     }
 
                     if (jump_target.has_value())
@@ -585,8 +596,10 @@ namespace Pip2
         return result_function;
     }
 
-    std::vector<Function> ProgramAnalysis::analyze(const std::uint32_t entry_point_addr)
+    std::vector<Function> ProgramAnalysis::analyze(const std::uint32_t entry_point_addr, bool &does_program_use_task)
     {
+        does_program_use_task = false;
+
         std::vector<Function> results;
         found_functions_.clear();
         found_table_labels_.clear();
@@ -624,9 +637,15 @@ namespace Pip2
             analyse_queue_.push(value - text_base_);
         }
 
+        bool once_used_task_inst = false;
+        bool once_called_task = false;
+
         auto analyse_routine = [&]() {
             while (!analyse_queue_.empty())
             {
+                bool does_function_use_task_inst = false;
+                bool does_function_call_task = false;
+
                 auto addr = text_base_ + analyse_queue_.front();
                 analyse_queue_.pop();
 
@@ -635,10 +654,17 @@ namespace Pip2
                     continue;
                 }
 
-                Function sweeped = sweep_function(addr);
+                Function sweeped = sweep_function(addr, does_function_use_task_inst, does_function_call_task);
                 sweeped.is_entry_point_ = (addr == entry_point_addr + text_base_);
 
                 results.push_back(sweeped);
+
+                once_called_task = once_called_task || does_function_call_task;
+                once_used_task_inst = once_used_task_inst || does_function_use_task_inst;
+
+                if (once_called_task && once_used_task_inst) {
+                    does_program_use_task = true;
+                }
             }
         };
 

@@ -32,6 +32,7 @@ add_library(llvm-pip2 SHARED
         TaskHandler.h
         SpecialFunction.cpp
         SpecialFunction.h
+        Callback.h
 )
 
 target_include_directories(llvm-pip2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

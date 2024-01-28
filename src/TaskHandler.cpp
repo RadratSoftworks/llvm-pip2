@@ -10,18 +10,25 @@ namespace Pip2 {
         task_handler->execute_entry_point_current_task();
     }
 
-    TaskHandler::TaskHandler(VMEngine *engine, TaskExecuteEntryFunc execute_entry_func, Common::TaskStackCreateFunc stack_create_func,
-                             Common::TaskStackFreeFunc stack_free_func)
+    static void safe_hle_handler_trampoline(void *userdata, int code) {
+        TaskHandler *task_handler = engine_instance->task_handler();
+        task_handler->call_hle_handler_task_safe(userdata, code);
+    }
+
+    TaskHandler::TaskHandler(VMEngine *engine, TaskExecuteEntryFunc execute_entry_func, TaskStackCreateFunc stack_create_func,
+                             TaskStackFreeFunc stack_free_func)
         : stack_create_func_(stack_create_func)
         , stack_free_func_(stack_free_func)
         , execute_entry_func_(execute_entry_func)
+        , hle_handler_(nullptr)
         , stack_size_(-1)
         , current_task_id_(-1)
-        , engine_(engine) {
+        , engine_(engine)
+        , request_code_(RequestCode::Exit) {
     }
 
     void TaskHandler::execute_entry_point_current_task() {
-        execute_entry_func_(*tasks_[current_task_id_ - 1]);
+        execute_entry_func_(*tasks_[current_task_id_ - 1], safe_hle_handler_trampoline);
         current_task_finished();
     }
 
@@ -58,8 +65,24 @@ namespace Pip2 {
         return push_task(task_data);
     }
 
-    void TaskHandler::run_entry_point_task() {
+    void TaskHandler::handle_request() {
+        switch (request_code_) {
+            case RequestCode::RunHleHandler:
+                hle_handler_(request_userdata_, request_arg_);
+                break;
+            case RequestCode::Exit:
+                break;
+        }
+
+        if (request_code_ != RequestCode::Exit) {
+            request_code_ = RequestCode::Exit;
+            co_switch(tasks_[current_task_id_ - 1]->handle_);
+        }
+    }
+
+    void TaskHandler::run_entry_point_task(HleHandler hle_handler) {
         main_handle_ = co_active();
+        hle_handler_ = hle_handler;
 
         std::unique_ptr<TaskData> task_data = std::make_unique<TaskData>();
 
@@ -73,6 +96,10 @@ namespace Pip2 {
 
         schedule_task(task_data_ptr);
         switch_to_next_task();
+
+        while (request_code_ != RequestCode::Exit) {
+            handle_request();
+        }
     }
 
     void TaskHandler::dispose_task(int task_id) {
@@ -174,5 +201,13 @@ namespace Pip2 {
     void TaskHandler::current_task_finished() {
         dispose_task(current_task_id_);
         switch_to_next_task();
+    }
+
+    void TaskHandler::call_hle_handler_task_safe(void *userdata, int code) {
+        request_code_ = RequestCode::RunHleHandler;
+        request_userdata_ = userdata;
+        request_arg_ = code;
+
+        co_switch(main_handle_);
     }
 }

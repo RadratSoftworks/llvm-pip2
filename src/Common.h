@@ -7,9 +7,6 @@
 
 namespace Pip2::Common
 {
-    typedef std::uint32_t (*TaskStackCreateFunc)(void*, std::int64_t);
-    typedef void (*TaskStackFreeFunc)(void*, std::uint32_t);
-
     enum ExceptionCode {
         NotCompiledFunction = 1,
         AccessViolation

@@ -9,12 +9,13 @@
 #include <stack>
 
 #include "Common.h"
+#include "Callback.h"
 #include "VMContext.h"
 
 namespace Pip2 {
     struct TaskData;
 
-    using TaskExecuteEntryFunc = std::function<void(TaskData&)>;
+    using TaskExecuteEntryFunc = std::function<void(TaskData&, HleHandler)>;
 
     static constexpr int TASK_CURRENT = -1;
     static constexpr int ENTRY_POINT_TASK = 1;
@@ -34,13 +35,19 @@ namespace Pip2 {
 
     class TaskHandler {
     private:
+        enum RequestCode {
+            RunHleHandler,
+            Exit
+        };
+
         std::vector<std::unique_ptr<TaskData>> tasks_;
         std::vector<TaskData*> tasks_queue_;
 
-        Common::TaskStackCreateFunc stack_create_func_;
-        Common::TaskStackFreeFunc stack_free_func_;
+        TaskStackCreateFunc stack_create_func_;
+        TaskStackFreeFunc stack_free_func_;
 
         TaskExecuteEntryFunc execute_entry_func_;
+        HleHandler hle_handler_;
 
         std::int64_t stack_size_;
 
@@ -50,6 +57,10 @@ namespace Pip2 {
         cothread_t main_handle_;
         VMEngine *engine_;
 
+        RequestCode request_code_;
+        void *request_userdata_;
+        int request_arg_;
+
     private:
         int push_task(std::unique_ptr<TaskData> &task_data);
 
@@ -58,15 +69,16 @@ namespace Pip2 {
         void unschedule_task(TaskData *task_data);
         void current_task_finished();
         void switch_to_next_task();
+        void handle_request();
 
     public:
-        explicit TaskHandler(VMEngine *engine, TaskExecuteEntryFunc execute_entry_func, Common::TaskStackCreateFunc stack_create_func,
-                             Common::TaskStackFreeFunc stack_free_func);
+        explicit TaskHandler(VMEngine *engine, TaskExecuteEntryFunc execute_entry_func, TaskStackCreateFunc stack_create_func,
+                             TaskStackFreeFunc stack_free_func);
 
         ~TaskHandler() = default;
 
         int create_task(std::uint32_t func_addr, int p0, int p1, int p2);
-        void run_entry_point_task();
+        void run_entry_point_task(HleHandler hle_handler);
 
         void dispose_task(int task_id);
 
@@ -85,6 +97,7 @@ namespace Pip2 {
         void kill_current();
 
         void execute_entry_point_current_task();
+        void call_hle_handler_task_safe(void *userdata, int code);
 
         VMContext &current_task_context();
     };

@@ -30,7 +30,7 @@ namespace Pip2 {
             object_cache_ = std::make_unique<ObjectCache>(options_.cache_root_path_ ? options_.cache_root_path_ : "");
         }
 
-        task_handler_ = std::make_unique<TaskHandler>(this, std::bind(&VMEngine::run_task, this, std::placeholders::_1),
+        task_handler_ = std::make_unique<TaskHandler>(this, std::bind(&VMEngine::run_task, this, std::placeholders::_1, std::placeholders::_2),
                                                       config.stack_create_func_, config.stack_free_func_);
 
         initialize_execution_engine();
@@ -95,7 +95,7 @@ namespace Pip2 {
         if (options_.cache_) {
             if (object_cache_->does_cache_exist(module_name_))
             {
-                auto cache_buffer = object_cache_->load(module_name_);
+                auto cache_buffer = object_cache_->load(module_name_, &module_use_task_);
 
                 if (cache_buffer)
                 {
@@ -115,14 +115,18 @@ namespace Pip2 {
         ProgramAnalysis analysis(reinterpret_cast<std::uint32_t*>(config_.memory_base()),
                                  options_.text_base_, config_.memory_size(), config_.pool_items());
 
-        std::vector<Function> found_functions = analysis.analyze(options_.entry_point_);
+        std::vector<Function> found_functions = analysis.analyze(options_.entry_point_, module_use_task_);
 
         // Then translate
         Translator translator(llvm_context_, config_, options_);
-        auto module = translator.translate(module_name_, found_functions);
+        auto module = translator.translate(module_name_, found_functions, module_use_task_);
 
         // Optimize
         default_optimize(*module);
+
+        if (object_cache_) {
+            object_cache_->mark_module_use_task(module_name_, module_use_task_);
+        }
 
         // Add to execution engine
         execution_engine_->addModule(std::move(module));
@@ -158,7 +162,7 @@ namespace Pip2 {
         found_runtime_function_(context(), reinterpret_cast<std::uint32_t*>(config_.memory_base()), runtime_function_lookup_.data(), hle_handler, userdata);
     }
 
-    void VMEngine::run_task(TaskData &task_data) {
+    void VMEngine::run_task(TaskData &task_data, HleHandler hle_handler) {
         RuntimeFunction func = nullptr;
 
         if (task_data.id_ == ENTRY_POINT_TASK) {
@@ -173,18 +177,20 @@ namespace Pip2 {
         }
 
         func(task_data.context_, reinterpret_cast<std::uint32_t*>(config_.memory_base()), runtime_function_lookup_.data(),
-             active_handler_, active_handler_userdata_);
+             hle_handler, active_handler_userdata_);
     }
 
     void VMEngine::execute_task_aware(HleHandler hle_handler, void *userdata) {
-        prepare_runtime_function();
+        if (!module_use_task_) {
+            execute(hle_handler, userdata);
+        } else {
+            prepare_runtime_function();
 
-        active_handler_ = hle_handler;
-        active_handler_userdata_ = userdata;
+            active_handler_userdata_ = userdata;
+            engine_instance = this;
 
-        engine_instance = this;
-
-        task_handler_->run_entry_point_task();
+            task_handler_->run_entry_point_task(hle_handler);
+        }
     }
 
     std::uint32_t VMEngine::reg(Register reg) const {

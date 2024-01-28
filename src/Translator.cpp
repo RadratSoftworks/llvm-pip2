@@ -264,7 +264,8 @@ namespace Pip2 {
         builder_.CreateRetVoid();
     }
 
-    std::unique_ptr<llvm::Module> Translator::translate(const std::string &module_name, const std::vector<Function> &functions) {
+    std::unique_ptr<llvm::Module> Translator::translate(const std::string &module_name, const std::vector<Function> &functions, bool use_task) {
+        use_task_ = use_task;
         functions_.clear();
 
         auto module = std::make_unique<llvm::Module>(module_name, context_);
@@ -404,7 +405,8 @@ namespace Pip2 {
         , i8_type_(nullptr)
         , i16_type_(nullptr)
         , i32_type_(nullptr)
-        , current_addr_(0) {
+        , current_addr_(0)
+        , use_task_(false) {
         initialize_types();
     }
 }
